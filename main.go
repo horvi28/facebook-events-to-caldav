@@ -3,41 +3,30 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
 
-	"github.com/go-rod/rod"
-	"github.com/go-rod/rod/lib/launcher"
+	fbevents "github.com/grucha/facebook-events-scraper"
 )
 
 func main() {
 	eventUrl := "https://www.facebook.com/bolygo.hu/upcoming_hosted_events"
 
-	// Launch browser
-	u := launcher.New().
-		Headless(true).
-		MustLaunch()
-
-	browser := rod.New().ControlURL(u).MustConnect()
-	defer browser.MustClose()
-
-	page := browser.MustPage(eventUrl)
-
-	// Wait for dynamic content
-	page.MustWaitLoad()
-	time.Sleep(5 * time.Second)
-
-	elements, err := page.Elements("a[href*='/events/']")
+	// Scrape a short list of events from the URL
+	// opts := &fbevents.Options{
+	// 	IncludePastEvents: false,
+	// }
+	// events, err := fbevents.ScrapeFbEventListFull(eventUrl, opts)
+	upcoming := fbevents.EventTypeUpcoming
+	events, err := fbevents.ScrapeFbEventListFromPage(eventUrl, &upcoming, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Scrape failed: %v", err)
 	}
 
+	// Print unique event URLs
 	seen := make(map[string]bool)
-
-	for _, el := range elements {
-		href, _ := el.Attribute("href")
-		if href != nil && !seen[*href] {
-			fmt.Println(*href)
-			seen[*href] = true
+	for _, e := range events {
+		if !seen[e.URL] {
+			fmt.Println(e.URL)
+			seen[e.URL] = true
 		}
 	}
 }
