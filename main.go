@@ -45,6 +45,9 @@ func main() {
 			calendar.AddVEvent(createICalEventFromEventData(event))
 			seen[event.ID] = true
 		}
+		break
 	}
 	fmt.Printf("%s", calendar.Serialize())
+
+	writeCalendarToFile(calendar, "events.ics")
 }

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+	"os"
 	"time"
 
 	ics "github.com/arran4/golang-ical"
@@ -36,4 +38,13 @@ func createICalEventFromEventData(event *fbevents.EventData) *ics.VEvent {
 	vevent.SetLastModifiedAt(time.Now())
 
 	return vevent
+}
+
+func writeCalendarToFile(calendar *ics.Calendar, filePath string) error {
+	if calendar == nil {
+		return errors.New("Calendar cannot be nil")
+	}
+
+	calendarContent := calendar.Serialize()
+	return os.WriteFile(filePath, []byte(calendarContent), 0o644)
 }
