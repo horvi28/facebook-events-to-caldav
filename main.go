@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"fmt"
 	"log"
 	"os"
 
@@ -22,7 +21,8 @@ func scrapeEventsForHost(hostUrl string) []*fbevents.EventData {
 }
 
 func scrapeEventsForHosts(hostUrls []string) []*fbevents.EventData {
-	allEvents := make([]*fbevents.EventData, 0, len(hostUrls)*2) // Init the slice whith at least hostUrl * 2 capacity
+	// Init the slice whith at least hostUrl * 2 capacity
+	allEvents := make([]*fbevents.EventData, 0, len(hostUrls)*2)
 	for _, hostUrl := range hostUrls {
 		events := scrapeEventsForHost(hostUrl)
 		allEvents = append(allEvents, events...)
@@ -73,20 +73,7 @@ func main() {
 		}
 	}
 
-	// Crete calendar
-	calendar := createCalendar()
-
-	// Add events to the calendar
-	// Only process an event once
-	seen := make(map[string]bool)
-	for _, event := range events {
-		if !seen[event.ID] {
-			calendar.AddVEvent(createICalEventFromEventData(event))
-			seen[event.ID] = true
-		}
-		break
-	}
-	fmt.Printf("%s", calendar.Serialize())
-
+	// Convert the events to an iCal calendar and write it to a file
+	calendar := convertEventsToICalCalendar(events)
 	writeCalendarToFile(calendar, "events.ics")
 }

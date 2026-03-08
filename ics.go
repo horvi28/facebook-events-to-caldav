@@ -44,6 +44,23 @@ func createICalEventFromEventData(event *fbevents.EventData) *ics.VEvent {
 	return vevent
 }
 
+func convertEventsToICalCalendar(events []*fbevents.EventData) *ics.Calendar {
+	// Crete calendar
+	calendar := createCalendar()
+
+	// Add events to the calendar
+	// Only process an event once as it is possible that the same event is hosted by multiple hosts
+	// TODO: This check might be better to do before creating the calendar, directly at the scraping
+	seen := make(map[string]bool)
+	for _, event := range events {
+		if !seen[event.ID] {
+			calendar.AddVEvent(createICalEventFromEventData(event))
+			seen[event.ID] = true
+		}
+	}
+	return calendar
+}
+
 func writeCalendarToFile(calendar *ics.Calendar, filePath string) error {
 	if calendar == nil {
 		return errors.New("Calendar cannot be nil")
