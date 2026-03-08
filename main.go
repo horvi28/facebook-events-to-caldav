@@ -34,12 +34,17 @@ func main() {
 		}
 	}
 
-	// Print unique event URLs
+	// Crete calendar
+	calendar := createCalendar()
+
+	// Add events to the calendar
+	// Only process an event once
 	seen := make(map[string]bool)
 	for _, event := range events {
-		if !seen[event.URL] {
-			fmt.Println(event.URL)
-			seen[event.URL] = true
+		if !seen[event.ID] {
+			calendar.AddVEvent(createICalEventFromEventData(event))
+			seen[event.ID] = true
 		}
 	}
+	fmt.Printf("%s", calendar.Serialize())
 }
