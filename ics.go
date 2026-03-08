@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"log"
 	"os"
 	"time"
 
@@ -45,6 +46,7 @@ func createICalEventFromEventData(event *fbevents.EventData) *ics.VEvent {
 }
 
 func convertEventsToICalCalendar(events []*fbevents.EventData) *ics.Calendar {
+	log.Printf("Converting %d events to iCal calendar", len(events))
 	// Crete calendar
 	calendar := createCalendar()
 
@@ -56,12 +58,16 @@ func convertEventsToICalCalendar(events []*fbevents.EventData) *ics.Calendar {
 		if !seen[event.ID] {
 			calendar.AddVEvent(createICalEventFromEventData(event))
 			seen[event.ID] = true
+		} else {
+			log.Printf("Skipping duplicate event %s: %s", event.ID, event.Name)
 		}
 	}
+	log.Printf("Finished converting events to iCal calendar with %d unique events", len(calendar.Events()))
 	return calendar
 }
 
 func writeCalendarToFile(calendar *ics.Calendar, filePath string) error {
+	log.Printf("Writing calendar to file: %s", filePath)
 	if calendar == nil {
 		return errors.New("Calendar cannot be nil")
 	}
