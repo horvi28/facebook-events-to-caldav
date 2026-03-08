@@ -24,8 +24,10 @@ func createICalEventFromEventData(event *fbevents.EventData) *ics.VEvent {
 
 	vevent := ics.NewEvent(event.ID)
 	vevent.SetSummary(event.Name)
-	vevent.SetDescription(event.Description)
 	vevent.SetURL(event.URL)
+
+	// Add the URL to the end of the description as well
+	vevent.SetDescription(event.Description + "\n\n" + event.URL)
 
 	eventStart := time.Unix(event.StartTimestamp, 0)
 	vevent.SetStartAt(eventStart)
@@ -34,6 +36,8 @@ func createICalEventFromEventData(event *fbevents.EventData) *ics.VEvent {
 		eventEnd := time.Unix(*event.EndTimestamp, 0)
 		vevent.SetEndAt(eventEnd)
 	}
+
+	vevent.SetLocation(event.Location.Name)
 
 	vevent.SetLastModifiedAt(time.Now())
 
