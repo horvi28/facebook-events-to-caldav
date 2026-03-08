@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"os"
@@ -8,29 +9,67 @@ import (
 	fbevents "github.com/grucha/facebook-events-scraper"
 )
 
+func scrapeEventsForHost(hostUrl string) []*fbevents.EventData {
+	// Scrape full event details but only for upcoming events
+	options := &fbevents.Options{
+		IncludePastEvents: false,
+	}
+	events, err := fbevents.ScrapeFbEventListFull(hostUrl, options)
+	if err != nil {
+		log.Fatalf("Scrape failed for host %s: %v", hostUrl, err)
+	}
+	return events
+}
+
+func scrapeEventsForHosts(hostUrls []string) []*fbevents.EventData {
+	allEvents := make([]*fbevents.EventData, 0, len(hostUrls)*2) // Init the slice whith at least hostUrl * 2 capacity
+	for _, hostUrl := range hostUrls {
+		events := scrapeEventsForHost(hostUrl)
+		allEvents = append(allEvents, events...)
+	}
+	return allEvents
+}
+
+func getHostList() []string {
+	const hostsFilePath = "hosts.txt"
+
+	file, err := os.Open(hostsFilePath)
+	if err != nil {
+		log.Fatalf("Error opening %s file: %v", hostsFilePath, err)
+	}
+	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Fatalf("Error reading file: %v", err)
+	}
+
+	return lines
+}
+
 func main() {
-	eventUrl := "https://www.facebook.com/bolygo.hu/upcoming_hosted_events"
-	eventsJsonPath := "events.json"
+	const loadFromJson = false
 
-	var events []*fbevents.EventData
+	var (
+		events []*fbevents.EventData
+		err    error
+	)
 
-	if _, err := os.Stat(eventsJsonPath); err == nil {
-		events, err = loadEventsFromJsonFile(eventsJsonPath)
+	if loadFromJson {
+		events, err = loadEventsFromJsonFile()
 		if err != nil {
-			log.Fatalf("Event load failed: %v", err)
+			log.Fatalf("Event load from json failed: %v", err)
 		}
 	} else {
-		// Scrape full event details but only for upcoming events
-		options := &fbevents.Options{
-			IncludePastEvents: false,
-		}
-		events, err := fbevents.ScrapeFbEventListFull(eventUrl, options)
-		if err != nil {
-			log.Fatalf("Scrape failed: %v", err)
-		}
+		events = scrapeEventsForHosts(getHostList())
 
-		if err := dumpEventsToJsonFile(eventsJsonPath, events); err != nil {
-			log.Fatalf("Event dump failed: %v", err)
+		if err := dumpEventsToJsonFile(events); err != nil {
+			log.Printf("Event dump to json failed: %v", err)
 		}
 	}
 
