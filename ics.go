@@ -38,7 +38,9 @@ func createICalEventFromEventData(event *fbevents.EventData) *ics.VEvent {
 		vevent.SetEndAt(eventEnd)
 	}
 
-	vevent.SetLocation(event.Location.Name)
+	if event.Location != nil && event.Location.Name != "" {
+		vevent.SetLocation(event.Location.Name)
+	}
 
 	vevent.SetLastModifiedAt(time.Now())
 
