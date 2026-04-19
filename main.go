@@ -33,25 +33,31 @@ func getHostList() []string {
 func main() {
 	const loadFromJson = true
 
-	var (
-		events []*fbevents.EventData
-		err    error
-	)
+	var allEvents map[string]*fbevents.EventData
 
 	if loadFromJson {
-		events, err = loadEventsFromJsonFile()
+		eventsFromJSON, err := loadEventsFromJsonFile()
 		if err != nil {
 			log.Fatalf("Event load from json failed: %v", err)
 		}
+		// Deduplicate events from JSON and convert to a map
+		allEvents = make(map[string]*fbevents.EventData)
+		for _, event := range eventsFromJSON {
+			allEvents[event.ID] = event
+		}
 	} else {
-		events = scrapeEventsForHosts(getHostList())
-
-		if err := dumpEventsToJsonFile(events); err != nil {
+		allEvents = scrapeEventsForHosts(getHostList())
+		// Dump to JSON for caching, but first convert it to a slice
+		eventsSlice := make([]*fbevents.EventData, 0, len(allEvents))
+		for _, event := range allEvents {
+			eventsSlice = append(eventsSlice, event)
+		}
+		if err := dumpEventsToJsonFile(eventsSlice); err != nil {
 			log.Printf("Event dump to json failed: %v", err)
 		}
 	}
 
 	// Convert the events to an iCal calendar and write it to a file
-	calendar := convertEventsToICalCalendar(events)
+	calendar := convertEventsToICalCalendar(allEvents)
 	writeCalendarToFile(calendar, "events.ics")
 }

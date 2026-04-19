@@ -57,24 +57,16 @@ func convertSingleEventToICal(event *fbevents.EventData) *ics.Calendar {
 	return calendar
 }
 
-func convertEventsToICalCalendar(events []*fbevents.EventData) *ics.Calendar {
+func convertEventsToICalCalendar(events map[string]*fbevents.EventData) *ics.Calendar {
 	log.Printf("Converting %d events to iCal calendar", len(events))
-	// Crete calendar
+	// Create calendar
 	calendar := createCalendar()
 
 	// Add events to the calendar
-	// Only process an event once as it is possible that the same event is hosted by multiple hosts
-	// TODO: This check might be better to do before creating the calendar, directly at the scraping
-	seen := make(map[string]bool)
 	for _, event := range events {
-		if !seen[event.ID] {
-			calendar.AddVEvent(createICalEventFromEventData(event))
-			seen[event.ID] = true
-		} else {
-			log.Printf("Skipping duplicate event %s: %s", event.ID, event.Name)
-		}
+		calendar.AddVEvent(createICalEventFromEventData(event))
 	}
-	log.Printf("Finished converting events to iCal calendar with %d unique events", len(calendar.Events()))
+	log.Printf("Finished converting events to iCal calendar with %d events", len(calendar.Events()))
 	return calendar
 }
 

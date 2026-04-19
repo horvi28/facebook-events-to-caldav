@@ -18,7 +18,6 @@ func scrapeEventsForHost(hostUrl string) ([]*fbevents.EventData, error) {
 	options := &fbevents.Options{
 		IncludePastEvents: false,
 	}
-	log.Printf("Scrape events for %s", hostUrl)
 	events, err := fbevents.ScrapeFbEventListFull(hostUrl, options)
 	if err != nil {
 		log.Printf("Scrape failed for host %s: %v", hostUrl, err)
@@ -28,29 +27,35 @@ func scrapeEventsForHost(hostUrl string) ([]*fbevents.EventData, error) {
 	return events, nil
 }
 
-func scrapeEventsForHosts(hostUrls []string) []*fbevents.EventData {
+func scrapeEventsForHosts(hostUrls []string) map[string]*fbevents.EventData {
 	log.Printf("Start scraping events for %d hosts", len(hostUrls))
 
-	// Init the slice whith at least hostUrl * 2 capacity
-	allEvents := make([]*fbevents.EventData, 0, len(hostUrls)*2)
+	// Use a map to automatically deduplicate by event ID
+	eventsMap := make(map[string]*fbevents.EventData)
 
 	// Random generator to sleep between scrapes of different hosts to avoid hitting Facebook too hard
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	hardBlockCounter := 0
 	for i, hostUrl := range hostUrls {
+		log.Printf("[%d/%d] Scraping events for %s", i+1, len(hostUrls), hostUrl)
 		events, err := scrapeEventsForHost(hostUrl)
 		if err != nil {
-			// Hard block detected, sleep for at least 1 hour (1-2 hours randomly)
+			// Hard block detected, sleep for 1-2 hours
 			log.Printf("Hard block detected for host: %s, sleeping for 1-2 hours", hostUrl)
 			hardBlockCounter++
 			if hardBlockCounter > 5 {
-				log.Fatalf("Too many hard blocks detected, stopping scraper")
+				log.Fatalf("Too many hard blocks detected, stopping scraper!")
 				break
 			}
 			sleepRandom(r, 1*time.Hour, 2*time.Hour)
 			continue // Skip this host and continue with next
 		}
-		allEvents = append(allEvents, events...)
+
+		// Add events to map (duplicates automatically overwritten)
+		for _, event := range events {
+			eventsMap[event.ID] = event
+		}
+		log.Printf("Added %d events from %s (total unique: %d)", len(events), hostUrl, len(eventsMap))
 
 		// Big pause after every 15 profiles, 60-120s
 		if (i+1)%15 == 0 {
@@ -61,5 +66,6 @@ func scrapeEventsForHosts(hostUrls []string) []*fbevents.EventData {
 			sleepRandom(r, 2*time.Second, 5*time.Second)
 		}
 	}
-	return allEvents
+	log.Printf("Finished scraping, found %d unique events", len(eventsMap))
+	return eventsMap
 }
