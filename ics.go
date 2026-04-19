@@ -47,6 +47,16 @@ func createICalEventFromEventData(event *fbevents.EventData) *ics.VEvent {
 	return vevent
 }
 
+func convertSingleEventToICal(event *fbevents.EventData) *ics.Calendar {
+	log.Printf("Converting single event %s to iCal calendar", event.ID)
+	calendar := createCalendar()
+	vevent := createICalEventFromEventData(event)
+	if vevent != nil {
+		calendar.AddVEvent(vevent)
+	}
+	return calendar
+}
+
 func convertEventsToICalCalendar(events []*fbevents.EventData) *ics.Calendar {
 	log.Printf("Converting %d events to iCal calendar", len(events))
 	// Crete calendar
