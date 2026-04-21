@@ -33,6 +33,7 @@ func createICalEventFromEventData(event *fbevents.EventData) *ics.VEvent {
 	eventStart := time.Unix(event.StartTimestamp, 0)
 	vevent.SetStartAt(eventStart)
 
+	// Event end is optional
 	if event.EndTimestamp != nil {
 		eventEnd := time.Unix(*event.EndTimestamp, 0)
 		vevent.SetEndAt(eventEnd)
@@ -42,6 +43,7 @@ func createICalEventFromEventData(event *fbevents.EventData) *ics.VEvent {
 		vevent.SetLocation(event.Location.Name)
 	}
 
+	vevent.SetDtStampTime(time.Now())
 	vevent.SetLastModifiedAt(time.Now())
 
 	return vevent

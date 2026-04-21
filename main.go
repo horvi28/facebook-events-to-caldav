@@ -60,4 +60,7 @@ func main() {
 	// Convert the events to an iCal calendar and write it to a file
 	calendar := convertEventsToICalCalendar(allEvents)
 	writeCalendarToFile(calendar, "events.ics")
+
+	// Upload to CalDAV server
+	uploadEventsToCalDAV(allEvents)
 }
