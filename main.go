@@ -33,6 +33,11 @@ func getHostList() []string {
 func main() {
 	const loadFromJson = true
 
+	config, err := loadConfig()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
 	var allEvents map[string]*fbevents.EventData
 
 	if loadFromJson {
@@ -62,5 +67,5 @@ func main() {
 	writeCalendarToFile(calendar, "events.ics")
 
 	// Upload to CalDAV server
-	uploadEventsToCalDAV(allEvents)
+	uploadEventsToCalDAV(allEvents, config)
 }

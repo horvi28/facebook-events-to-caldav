@@ -11,7 +11,7 @@ import (
 	fbevents "github.com/grucha/facebook-events-scraper"
 )
 
-func doRequest(httpClient *http.Client, method, url string, body *strings.Reader) (*http.Response, error) {
+func doRequest(httpClient *http.Client, method, url, username, password string, body *strings.Reader) (*http.Response, error) {
 	// Use a per-request timeout so one slow request doesn't hang the whole run
 	requestCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -22,7 +22,7 @@ func doRequest(httpClient *http.Client, method, url string, body *strings.Reader
 		return nil, fmt.Errorf("Failed to create %s request for %s: %v", method, url, err)
 	}
 	//Basic auth using configured credentials
-	request.SetBasicAuth(config.username, config.password)
+	request.SetBasicAuth(username, password)
 
 	response, err := httpClient.Do(request)
 	if err != nil {
@@ -33,7 +33,7 @@ func doRequest(httpClient *http.Client, method, url string, body *strings.Reader
 }
 
 // uploadEventToCalDAV uploads a single event to the CalDAV server
-func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData) error {
+func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData, config Config) error {
 	if event == nil {
 		return fmt.Errorf("Event cannot be nil")
 	}
@@ -46,9 +46,9 @@ func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData) err
 	icsData := calendar.Serialize()
 
 	// Path on Radicale
-	remoteUrl := config.radicaleURL + config.calendarPath + event.ID + ".ics"
+	remoteUrl := config.CalDavUrl + config.CalendarPath + event.ID + ".ics"
 
-	response, err := doRequest(httpClient, http.MethodPut, remoteUrl, strings.NewReader(icsData))
+	response, err := doRequest(httpClient, http.MethodPut, remoteUrl, config.Username, config.Password, strings.NewReader(icsData))
 	log.Printf("Upload response for event '%s'. Status code: %s", event.Name, response.Status)
 
 	if err != nil {
@@ -59,7 +59,7 @@ func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData) err
 }
 
 // uploadEventsToCalDAV uploads all events to the CalDAV server
-func uploadEventsToCalDAV(events map[string]*fbevents.EventData) error {
+func uploadEventsToCalDAV(events map[string]*fbevents.EventData, config Config) error {
 	// Create a HTTP client with timeout
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
@@ -67,7 +67,7 @@ func uploadEventsToCalDAV(events map[string]*fbevents.EventData) error {
 
 	// Upload each event
 	for _, event := range events {
-		err := uploadEventToCalDAV(httpClient, event)
+		err := uploadEventToCalDAV(httpClient, event, config)
 		if err != nil {
 			log.Printf("Failed to upload event %s: %v", event.Name, err)
 		}
