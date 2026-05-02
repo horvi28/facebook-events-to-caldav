@@ -18,9 +18,12 @@ func createCalendar() *ics.Calendar {
 	return calendar
 }
 
-func createICalEventFromEventData(event *fbevents.EventData) *ics.VEvent {
+func createICalEventFromEventData(event *fbevents.EventData) (*ics.VEvent, error) {
 	if event == nil {
-		return nil
+		return nil, errors.New("event cannot be nil")
+	}
+	if event.ID == "" {
+		return nil, errors.New("event ID cannot be empty")
 	}
 
 	vevent := ics.NewEvent(event.ID)
@@ -46,17 +49,19 @@ func createICalEventFromEventData(event *fbevents.EventData) *ics.VEvent {
 	vevent.SetDtStampTime(time.Now())
 	vevent.SetLastModifiedAt(time.Now())
 
-	return vevent
+	return vevent, nil
 }
 
-func convertSingleEventToICal(event *fbevents.EventData) *ics.Calendar {
+func convertSingleEventToICal(event *fbevents.EventData) (*ics.Calendar, error) {
+	vevent, err := createICalEventFromEventData(event)
+	if err != nil {
+		return nil, fmt.Errorf("create iCal event: %w", err)
+	}
+
 	log.Printf("Converting single event %s to iCal calendar", event.ID)
 	calendar := createCalendar()
-	vevent := createICalEventFromEventData(event)
-	if vevent != nil {
 		calendar.AddVEvent(vevent)
-	}
-	return calendar
+	return calendar, nil
 }
 
 func convertEventsToICalCalendar(events map[string]*fbevents.EventData) *ics.Calendar {
@@ -66,18 +71,27 @@ func convertEventsToICalCalendar(events map[string]*fbevents.EventData) *ics.Cal
 
 	// Add events to the calendar
 	for _, event := range events {
-		calendar.AddVEvent(createICalEventFromEventData(event))
+		vevent, err := createICalEventFromEventData(event)
+		if err != nil {
+			return nil, fmt.Errorf("create iCal event: %w", err)
+		}
+
+		calendar.AddVEvent(vevent)
 	}
 	log.Printf("Finished converting events to iCal calendar with %d events", len(calendar.Events()))
-	return calendar
+	return calendar, nil
 }
 
 func writeCalendarToFile(calendar *ics.Calendar, filePath string) error {
 	log.Printf("Writing calendar to file: %s", filePath)
 	if calendar == nil {
-		return errors.New("Calendar cannot be nil")
+		return errors.New("calendar cannot be nil")
 	}
 
 	calendarContent := calendar.Serialize()
-	return os.WriteFile(filePath, []byte(calendarContent), 0o644)
+	if err := os.WriteFile(filePath, []byte(calendarContent), 0o644); err != nil {
+		return fmt.Errorf("write calendar file %s: %w", filePath, err)
+	}
+
+	return nil
 }
