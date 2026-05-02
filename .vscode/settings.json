@@ -15,6 +15,12 @@
             "source.organizeImports": "explicit"
         }
     },
-    //"go.toolsManagement.autoUpdate": true,
-    "go.vetOnSave": "package"
+    "go.toolsManagement.autoUpdate": true,
+    "go.vetOnSave": "package",
+    "go.lintTool": "golangci-lint-v2",
+    "go.lintOnSave": "package",
+    "go.lintFlags": [
+        "--path-mode=abs",
+        "--fast-only"
+    ]
 }
