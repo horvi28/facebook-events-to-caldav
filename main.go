@@ -17,7 +17,11 @@ func getHostList() (hostList []string, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("open hosts file %s: %w", hostsFilePath, err)
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf("close hosts file %s: %w", hostsFilePath, closeErr)
+		}
+	}()
 
 	var lines []string
 	scanner := bufio.NewScanner(file)
