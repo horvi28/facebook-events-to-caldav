@@ -8,7 +8,7 @@ import (
 )
 
 type Config struct {
-	CalDavUrl    string `env:"CALDAV_URL,notEmpty,required"`
+	CalDAVURL    string `env:"CALDAV_URL,notEmpty,required"`
 	Username     string `env:"CALDAV_USERNAME,notEmpty,required"`
 	Password     string `env:"CALDAV_PASSWORD,notEmpty,required"`
 	CalendarPath string `env:"CALDAV_CALENDAR_PATH,notEmpty,required"`

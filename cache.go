@@ -8,35 +8,34 @@ import (
 	fbevents "github.com/grucha/facebook-events-scraper"
 )
 
-const eventsJsonPath = "events.json"
+const eventsJSONPath = "events.json"
 
-func dumpEventsToJsonFile(events []*fbevents.EventData) error {
-	eventsJson, err := json.MarshalIndent(events, "", "  ")
+func dumpEventsToJSONFile(events []*fbevents.EventData) error {
+	eventsJSON, err := json.MarshalIndent(events, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	log.Printf("Dumping %d events to JSON file: %s", len(events), eventsJsonPath)
-	return os.WriteFile(eventsJsonPath, eventsJson, 0o644)
+	log.Printf("Dumping %d events to JSON file: %s", len(events), eventsJSONPath)
+	return os.WriteFile(eventsJSONPath, eventsJSON, 0o644)
 }
 
-func loadEventsFromJsonFile() ([]*fbevents.EventData, error) {
-	log.Printf("Loading events from JSON file: %s", eventsJsonPath)
+func loadEventsFromJSONFile() ([]*fbevents.EventData, error) {
+	log.Printf("Loading events from JSON file: %s", eventsJSONPath)
 	// Check if file exists before trying to read it
-	if _, err := os.Stat(eventsJsonPath); os.IsNotExist(err) {
+	if _, err := os.Stat(eventsJSONPath); os.IsNotExist(err) {
 		return nil, err
 	}
-
-	eventsJson, err := os.ReadFile(eventsJsonPath)
+	eventsJSON, err := os.ReadFile(eventsJSONPath)
 	if err != nil {
 		return nil, err
 	}
 
 	var events []*fbevents.EventData
-	if err := json.Unmarshal(eventsJson, &events); err != nil {
+	if err := json.Unmarshal(eventsJSON, &events); err != nil {
 		return nil, err
 	}
 
-	log.Printf("Loaded %d events from JSON file: %s", len(events), eventsJsonPath)
+	log.Printf("Loaded %d events from JSON file: %s", len(events), eventsJSONPath)
 	return events, nil
 }

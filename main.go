@@ -1,3 +1,4 @@
+// Package main scrapes Facebook events and publishes them as iCalendar data to a CalDAV server.
 package main
 
 import (
@@ -31,7 +32,7 @@ func getHostList() []string {
 }
 
 func main() {
-	const loadFromJson = true
+	const loadFromJSON = true
 
 	config, err := loadConfig()
 	if err != nil {
@@ -40,8 +41,8 @@ func main() {
 
 	var allEvents map[string]*fbevents.EventData
 
-	if loadFromJson {
-		eventsFromJSON, err := loadEventsFromJsonFile()
+	if loadFromJSON {
+		eventsFromJSON, err := loadEventsFromJSONFile()
 		if err != nil {
 			log.Fatalf("Event load from json failed: %v", err)
 		}
@@ -57,7 +58,7 @@ func main() {
 		for _, event := range allEvents {
 			eventsSlice = append(eventsSlice, event)
 		}
-		if err := dumpEventsToJsonFile(eventsSlice); err != nil {
+		if err := dumpEventsToJSONFile(eventsSlice); err != nil {
 			log.Printf("Event dump to json failed: %v", err)
 		}
 	}

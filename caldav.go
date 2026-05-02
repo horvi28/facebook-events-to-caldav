@@ -21,7 +21,7 @@ func doRequest(httpClient *http.Client, method, url, username, password string, 
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create %s request for %s: %v", method, url, err)
 	}
-	//Basic auth using configured credentials
+	request.Header.Set("Content-Type", "text/calendar; charset=utf-8")
 	request.SetBasicAuth(username, password)
 
 	response, err := httpClient.Do(request)
@@ -46,9 +46,9 @@ func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData, con
 	icsData := calendar.Serialize()
 
 	// Path on Radicale
-	remoteUrl := config.CalDavUrl + config.CalendarPath + event.ID + ".ics"
+	remoteURL := config.CalDAVURL + config.CalendarPath + event.ID + ".ics"
 
-	response, err := doRequest(httpClient, http.MethodPut, remoteUrl, config.Username, config.Password, strings.NewReader(icsData))
+	response, err := doRequest(httpClient, http.MethodPut, remoteURL, config.Username, config.Password, strings.NewReader(icsData))
 	log.Printf("Upload response for event '%s'. Status code: %s", event.Name, response.Status)
 
 	if err != nil {
