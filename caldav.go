@@ -59,7 +59,17 @@ func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData, con
 	if err != nil {
 		return fmt.Errorf("upload event %q: %w", event.Name, err)
 	}
+
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		responseBody, readErr := io.ReadAll(io.LimitReader(response.Body, 4096))
+		if readErr != nil {
+			return fmt.Errorf("read failed upload response for event %q: %w", event.Name, readErr)
+		}
+
+		return fmt.Errorf("upload event %q: unexpected status %s: %s", event.Name, response.Status, strings.TrimSpace(string(responseBody)))
 	}
+
+	log.Printf("Upload response for event '%s'. Status code: %s", event.Name, response.Status)
 
 	return nil
 }
