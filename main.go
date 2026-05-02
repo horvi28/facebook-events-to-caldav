@@ -3,18 +3,19 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"os"
 
 	fbevents "github.com/grucha/facebook-events-scraper"
 )
 
-func getHostList() []string {
+func getHostList() (hostList []string, err error) {
 	const hostsFilePath = "hosts.txt"
 
 	file, err := os.Open(hostsFilePath)
 	if err != nil {
-		log.Fatalf("Error opening %s file: %v", hostsFilePath, err)
+		return nil, fmt.Errorf("open hosts file %s: %w", hostsFilePath, err)
 	}
 	defer file.Close()
 
@@ -25,18 +26,18 @@ func getHostList() []string {
 	}
 
 	if err := scanner.Err(); err != nil {
-		log.Fatalf("Error reading file: %v", err)
+		return nil, fmt.Errorf("read hosts file %s: %w", hostsFilePath, err)
 	}
 
-	return lines
+	return lines, nil
 }
 
-func main() {
+func run() error {
 	const loadFromJSON = true
 
 	config, err := loadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		return fmt.Errorf("load configuration: %w", err)
 	}
 
 	var allEvents map[string]*fbevents.EventData
@@ -44,7 +45,7 @@ func main() {
 	if loadFromJSON {
 		eventsFromJSON, err := loadEventsFromJSONFile()
 		if err != nil {
-			log.Fatalf("Event load from json failed: %v", err)
+			return fmt.Errorf("load events from JSON file: %w", err)
 		}
 		// Deduplicate events from JSON and convert to a map
 		allEvents = make(map[string]*fbevents.EventData)
@@ -52,21 +53,46 @@ func main() {
 			allEvents[event.ID] = event
 		}
 	} else {
-		allEvents = scrapeEventsForHosts(getHostList())
+		hostList, err := getHostList()
+		if err != nil {
+			return fmt.Errorf("load host list: %w", err)
+		}
+
+		allEvents, err = scrapeEventsForHosts(hostList)
+		if err != nil {
+			return fmt.Errorf("scrape events for hosts: %w", err)
+		}
+
 		// Dump to JSON for caching, but first convert it to a slice
 		eventsSlice := make([]*fbevents.EventData, 0, len(allEvents))
 		for _, event := range allEvents {
 			eventsSlice = append(eventsSlice, event)
 		}
 		if err := dumpEventsToJSONFile(eventsSlice); err != nil {
-			log.Printf("Event dump to json failed: %v", err)
+			return fmt.Errorf("dump events to JSON file: %w", err)
 		}
 	}
 
 	// Convert the events to an iCal calendar and write it to a file
-	calendar := convertEventsToICalCalendar(allEvents)
-	writeCalendarToFile(calendar, "events.ics")
+	calendar, err := convertEventsToICalCalendar(allEvents)
+	if err != nil {
+		return fmt.Errorf("convert events to iCal calendar: %w", err)
+	}
+
+	if err := writeCalendarToFile(calendar, "events.ics"); err != nil {
+		return fmt.Errorf("write calendar file: %w", err)
+	}
 
 	// Upload to CalDAV server
-	uploadEventsToCalDAV(allEvents, config)
+	if err := uploadEventsToCalDAV(allEvents, config); err != nil {
+		return fmt.Errorf("upload events to CalDAV: %w", err)
+	}
+
+	return nil
+}
+
+func main() {
+	if err := run(); err != nil {
+		log.Fatalf("Application failed: %v", err)
+	}
 }

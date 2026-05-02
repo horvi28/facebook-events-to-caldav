@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/joho/godotenv"
@@ -16,12 +16,12 @@ type Config struct {
 
 func loadConfig() (Config, error) {
 	if err := godotenv.Load(); err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
+		return Config{}, fmt.Errorf("load .env file: %w", err)
 	}
 
 	var config Config
 	if err := env.Parse(&config); err != nil {
-		log.Fatalf("Unable to parse environment variables: %v", err)
+		return Config{}, fmt.Errorf("parse environment variables: %w", err)
 	}
 
 	return config, nil

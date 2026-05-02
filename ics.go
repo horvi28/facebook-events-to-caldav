@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"os"
 	"time"
@@ -60,11 +61,11 @@ func convertSingleEventToICal(event *fbevents.EventData) (*ics.Calendar, error) 
 
 	log.Printf("Converting single event %s to iCal calendar", event.ID)
 	calendar := createCalendar()
-		calendar.AddVEvent(vevent)
+	calendar.AddVEvent(vevent)
 	return calendar, nil
 }
 
-func convertEventsToICalCalendar(events map[string]*fbevents.EventData) *ics.Calendar {
+func convertEventsToICalCalendar(events map[string]*fbevents.EventData) (*ics.Calendar, error) {
 	log.Printf("Converting %d events to iCal calendar", len(events))
 	// Create calendar
 	calendar := createCalendar()

@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
@@ -19,28 +21,31 @@ func doRequest(httpClient *http.Client, method, url, username, password string, 
 	// Use a direct HTTP PUT so we can set Content-Type explicitly
 	request, err := http.NewRequestWithContext(requestCtx, method, url, body)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create %s request for %s: %v", method, url, err)
+		return nil, fmt.Errorf("create %s request for %s: %w", method, url, err)
 	}
 	request.Header.Set("Content-Type", "text/calendar; charset=utf-8")
 	request.SetBasicAuth(username, password)
 
 	response, err := httpClient.Do(request)
 	if err != nil {
-		return nil, fmt.Errorf("Request failed: %v", err)
+		return nil, fmt.Errorf("send %s request to %s: %w", method, url, err)
 	}
-	defer response.Body.Close()
+
 	return response, nil
 }
 
 // uploadEventToCalDAV uploads a single event to the CalDAV server
 func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData, config Config) error {
 	if event == nil {
-		return fmt.Errorf("Event cannot be nil")
+		return errors.New("event cannot be nil")
 	}
 	log.Printf("Uploading event: '%s' ...", event.Name)
 
 	// Create a single-event calendar
-	calendar := convertSingleEventToICal(event)
+	calendar, err := convertSingleEventToICal(event)
+	if err != nil {
+		return fmt.Errorf("convert event %q to iCal: %w", event.Name, err)
+	}
 
 	// Serialize to ICS format
 	icsData := calendar.Serialize()
@@ -52,7 +57,8 @@ func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData, con
 	log.Printf("Upload response for event '%s'. Status code: %s", event.Name, response.Status)
 
 	if err != nil {
-		return fmt.Errorf("Failed to upload event %s: %v", event.Name, err)
+		return fmt.Errorf("upload event %q: %w", event.Name, err)
+	}
 	}
 
 	return nil
@@ -66,11 +72,16 @@ func uploadEventsToCalDAV(events map[string]*fbevents.EventData, config Config) 
 	}
 
 	// Upload each event
+	var uploadErrors []error
 	for _, event := range events {
 		err := uploadEventToCalDAV(httpClient, event, config)
 		if err != nil {
-			log.Printf("Failed to upload event %s: %v", event.Name, err)
+			uploadErrors = append(uploadErrors, err)
 		}
+	}
+
+	if len(uploadErrors) > 0 {
+		return fmt.Errorf("upload %d of %d events: %w", len(uploadErrors), len(events), errors.Join(uploadErrors...))
 	}
 
 	log.Printf("Finished uploading %d events to CalDAV server", len(events))

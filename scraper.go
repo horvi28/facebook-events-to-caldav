@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math/rand"
 	"time"
@@ -20,14 +21,13 @@ func scrapeEventsForHost(hostURL string) ([]*fbevents.EventData, error) {
 	}
 	events, err := fbevents.ScrapeFbEventListFull(hostURL, options)
 	if err != nil {
-		log.Printf("Scrape failed for host %s: %v", hostURL, err)
-		return nil, err
+		return nil, fmt.Errorf("scrape Facebook events for host %s: %w", hostURL, err)
 	}
 	log.Printf("Scraped %d events for %s", len(events), hostURL)
 	return events, nil
 }
 
-func scrapeEventsForHosts(hostUrls []string) map[string]*fbevents.EventData {
+func scrapeEventsForHosts(hostUrls []string) (map[string]*fbevents.EventData, error) {
 	log.Printf("Start scraping events for %d hosts", len(hostUrls))
 
 	// Use a map to automatically deduplicate by event ID
@@ -45,8 +45,7 @@ func scrapeEventsForHosts(hostUrls []string) map[string]*fbevents.EventData {
 			log.Printf("Hard block detected for host: %s, sleeping for 1-2 hours", hostURL)
 			hardBlockCounter++
 			if hardBlockCounter > maxHardBlockCount {
-				log.Fatalf("Too many hard blocks detected, stopping scraper!")
-				break
+				return eventsMap, fmt.Errorf("stop scraping after %d hard blocks: %w", hardBlockCounter, err)
 			}
 			sleepRandom(r, 1*time.Hour, 2*time.Hour)
 			continue // Skip this host and continue with next
@@ -68,5 +67,5 @@ func scrapeEventsForHosts(hostUrls []string) map[string]*fbevents.EventData {
 		}
 	}
 	log.Printf("Finished scraping, found %d unique events", len(eventsMap))
-	return eventsMap
+	return eventsMap, nil
 }
