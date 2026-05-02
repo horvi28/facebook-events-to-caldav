@@ -18,3 +18,14 @@ linters:
     - varnamelen
     - funlen
     - dupl
+    - gocognit
+    - cyclop
+    - maintidx
+    - errorlint
+    - wrapcheck
+    - noctx
+    - nilnil
+
+  settings:
+    cyclop:
+      max-complexity: 12
