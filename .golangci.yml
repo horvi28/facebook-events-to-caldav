@@ -11,3 +11,10 @@ linters:
     - bodyclose
     - copyloopvar
     - durationcheck
+    - gocritic
+    - misspell
+    - unconvert
+    - prealloc
+    - varnamelen
+    - funlen
+    - dupl

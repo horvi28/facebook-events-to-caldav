@@ -34,11 +34,12 @@ func scrapeEventsForHosts(hostUrls []string) (map[string]*fbevents.EventData, er
 	eventsMap := make(map[string]*fbevents.EventData)
 
 	// Random generator to sleep between scrapes of different hosts to avoid hitting Facebook too hard
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	randomGenerator := rand.New(rand.NewSource(time.Now().UnixNano()))
 	hardBlockCounter := 0
 	const maxHardBlockCount = 5
-	for i, hostURL := range hostUrls {
-		log.Printf("[%d/%d] Scraping events for %s", i+1, len(hostUrls), hostURL)
+	for index, hostURL := range hostUrls {
+		eventNumber := index + 1
+		log.Printf("[%d/%d] Scraping events for %s", eventNumber, len(hostUrls), hostURL)
 		events, err := scrapeEventsForHost(hostURL)
 		if err != nil {
 			// Hard block detected, sleep for 1-2 hours
@@ -47,7 +48,7 @@ func scrapeEventsForHosts(hostUrls []string) (map[string]*fbevents.EventData, er
 			if hardBlockCounter > maxHardBlockCount {
 				return eventsMap, fmt.Errorf("stop scraping after %d hard blocks: %w", hardBlockCounter, err)
 			}
-			sleepRandom(r, 1*time.Hour, 2*time.Hour)
+			sleepRandom(randomGenerator, 1*time.Hour, 2*time.Hour)
 			continue // Skip this host and continue with next
 		}
 
@@ -58,12 +59,12 @@ func scrapeEventsForHosts(hostUrls []string) (map[string]*fbevents.EventData, er
 		log.Printf("Added %d events from %s (total unique: %d)", len(events), hostURL, len(eventsMap))
 
 		// Big pause after every 15 profiles, 60-120s
-		if (i+1)%15 == 0 {
-			log.Printf("[%d/%d] Scraping events, sleeping for 60-120 seconds", i+1, len(hostUrls))
-			sleepRandom(r, 60*time.Second, 120*time.Second)
+		if eventNumber%15 == 0 {
+			log.Printf("[%d/%d] Scraping events, sleeping for 60-120 seconds", eventNumber, len(hostUrls))
+			sleepRandom(randomGenerator, 60*time.Second, 120*time.Second)
 		} else {
 			// Small sleep between every profile: 2-5s
-			sleepRandom(r, 2*time.Second, 5*time.Second)
+			sleepRandom(randomGenerator, 2*time.Second, 5*time.Second)
 		}
 	}
 	log.Printf("Finished scraping, found %d unique events", len(eventsMap))
