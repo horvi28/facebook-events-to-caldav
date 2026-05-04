@@ -2,29 +2,50 @@ version: "2"
 
 linters:
   enable:
-    - govet
-    - staticcheck
-    - errcheck
-    - ineffassign
-    - unused
-    - revive
+    - asasalint
+    - bidichk
     - bodyclose
+    - canonicalheader
+    - containedctx
     - copyloopvar
-    - durationcheck
-    - gocritic
-    - misspell
-    - unconvert
-    - prealloc
-    - varnamelen
-    - funlen
-    - dupl
-    - gocognit
     - cyclop
-    - maintidx
+    - decorder
+    - dogsled
+    - dupl
+    - dupword
+    - durationcheck
+    - embeddedstructfieldcheck
+    - errcheck
+    - errchkjson
     - errorlint
-    - wrapcheck
-    - noctx
+    - funlen
+    - gocognit
+    - goconst
+    - gocritic
+    - govet
+    - iface
+    - ineffassign
+    - importas
+    - maintidx
+    - misspell
+    - modernize
+    - nilerr
+    - nilnesserr
     - nilnil
+    - noctx
+    - prealloc
+    - predeclared
+    - revive
+    - staticcheck
+    - tagalign
+    - tagliatelle
+    - unconvert
+    - unparam
+    - unused
+    - varnamelen
+    - wastedassign
+    - whitespace
+    - wrapcheck
 
   settings:
     cyclop:
