@@ -47,6 +47,27 @@ func createICalEventFromEventData(event *fbevents.EventData) (*ics.VEvent, error
 		vevent.SetLocation(event.Location.Name)
 	}
 
+	vevent.SetColor("#FF0000") // Default color (red)
+	// Set color based on event category if available (using the first category as a simple heuristic)
+	if event.Categories != nil && len(event.Categories) > 0 {
+		// Only use the first label for now
+		switch event.Categories[0].Label {
+		case "Music":
+			vevent.SetColor("#1DB954") // Spotify green
+		case "Sports":
+			vevent.SetColor("#40E0D0") // Turquoise
+		case "Party":
+			vevent.SetColor("#FFD700") // Gold
+		case "Film":
+			vevent.SetColor("#0000FF") // Blue
+		case "Gardening":
+			vevent.SetColor("#006400") // Dark green
+		case "Theater":
+			vevent.SetColor("#800080") // Purple
+		case "Games":
+			vevent.SetColor("#FF69B4") // Hot pink
+		}
+	}
 	vevent.SetDtStampTime(time.Now())
 	vevent.SetLastModifiedAt(time.Now())
 
@@ -71,14 +92,28 @@ func convertEventsToICalCalendar(events map[string]*fbevents.EventData) (*ics.Ca
 	calendar := createCalendar()
 
 	// Add events to the calendar
+	labels := make(map[string]int) // To track unique labels for logging
 	for _, event := range events {
 		vevent, err := createICalEventFromEventData(event)
 		if err != nil {
 			return nil, fmt.Errorf("create iCal event: %w", err)
 		}
 
+		// Count labels for logging purposes
+		if event.Categories != nil {
+			for _, category := range event.Categories {
+				labels[category.Label]++
+			}
+		}
+
 		calendar.AddVEvent(vevent)
 	}
+
+	log.Printf("%d unique labels have been found in the events", len(labels))
+	for label := range labels {
+		log.Printf("Label: %s, Count: %d", label, labels[label])
+	}
+
 	log.Printf("Finished converting events to iCal calendar with %d events", len(calendar.Events()))
 	return calendar, nil
 }
