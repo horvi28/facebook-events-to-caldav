@@ -62,7 +62,6 @@ func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData, con
 			err = fmt.Errorf("close upload response for event %q: %w", event.Name, closeErr)
 		}
 	}()
-	log.Printf("Upload response for event '%s'. Status code: %s", event.Name, response.Status)
 
 	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
 		responseBody, readErr := io.ReadAll(io.LimitReader(response.Body, 4096))
