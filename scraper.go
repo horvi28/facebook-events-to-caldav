@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math/rand"
@@ -35,18 +36,17 @@ func scrapeEventsForHosts(hostUrls []string) (map[string]*fbevents.EventData, er
 
 	// Random generator to sleep between scrapes of different hosts to avoid hitting Facebook too hard
 	randomGenerator := rand.New(rand.NewSource(time.Now().UnixNano()))
-	hardBlockCounter := 0
-	const maxHardBlockCount = 5
+	var scrapeErrors []error
+	const maxFailedHostCount = 5
 	for index, hostURL := range hostUrls {
 		eventNumber := index + 1
 		log.Printf("[%d/%d] Scraping events for %s", eventNumber, len(hostUrls), hostURL)
 		events, err := scrapeEventsForHost(hostURL)
 		if err != nil {
-			// Hard block detected, sleep for 1-2 hours
-			log.Printf("Hard block detected for host: %s, sleeping for 1-2 hours", hostURL)
-			hardBlockCounter++
-			if hardBlockCounter > maxHardBlockCount {
-				return eventsMap, fmt.Errorf("stop scraping after %d hard blocks: %w", hardBlockCounter, err)
+			log.Printf("Skipping host after scrape failure: %s: %v", hostURL, err)
+			scrapeErrors = append(scrapeErrors, err)
+			if len(scrapeErrors) > maxFailedHostCount {
+				return eventsMap, fmt.Errorf("stop scraping after %d failed hosts: %w", len(scrapeErrors), errors.Join(scrapeErrors...))
 			}
 			sleepRandom(randomGenerator, 1*time.Hour, 2*time.Hour)
 			continue // Skip this host and continue with next

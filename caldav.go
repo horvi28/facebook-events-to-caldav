@@ -35,7 +35,7 @@ func doRequest(httpClient *http.Client, method, url, username, password string, 
 }
 
 // uploadEventToCalDAV uploads a single event to the CalDAV server
-func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData, config Config) error {
+func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData, config Config) (err error) {
 	if event == nil {
 		return errors.New("event cannot be nil")
 	}
@@ -54,8 +54,6 @@ func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData, con
 	remoteURL := config.CalDAVURL + config.CalendarPath + event.ID + ".ics"
 
 	response, err := doRequest(httpClient, http.MethodPut, remoteURL, config.Username, config.Password, strings.NewReader(icsData))
-	log.Printf("Upload response for event '%s'. Status code: %s", event.Name, response.Status)
-
 	if err != nil {
 		return fmt.Errorf("upload event %q: %w", event.Name, err)
 	}
@@ -64,6 +62,7 @@ func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData, con
 			err = fmt.Errorf("close upload response for event %q: %w", event.Name, closeErr)
 		}
 	}()
+	log.Printf("Upload response for event '%s'. Status code: %s", event.Name, response.Status)
 
 	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
 		responseBody, readErr := io.ReadAll(io.LimitReader(response.Body, 4096))
