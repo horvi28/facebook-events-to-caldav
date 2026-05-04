@@ -9,9 +9,7 @@ import (
 	fbevents "github.com/grucha/facebook-events-scraper"
 )
 
-const eventsJSONPath = "events.json"
-
-func dumpEventsToJSONFile(events []*fbevents.EventData) error {
+func dumpEventsToJSONFile(events []*fbevents.EventData, eventsJSONPath string) error {
 	eventsJSON, err := json.MarshalIndent(events, "", "  ")
 	if err != nil {
 		return fmt.Errorf("marshal events to JSON: %w", err)
@@ -25,7 +23,7 @@ func dumpEventsToJSONFile(events []*fbevents.EventData) error {
 	return nil
 }
 
-func loadEventsFromJSONFile() ([]*fbevents.EventData, error) {
+func loadEventsFromJSONFile(eventsJSONPath string) ([]*fbevents.EventData, error) {
 	log.Printf("Loading events from JSON file: %s", eventsJSONPath)
 
 	eventsJSON, err := os.ReadFile(eventsJSONPath)

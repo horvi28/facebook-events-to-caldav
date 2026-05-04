@@ -38,6 +38,7 @@ func getHostList() (hostList []string, err error) {
 
 func run() error {
 	const loadFromJSON = true
+	const eventsJSONPath = "events.json"
 
 	config, err := loadConfig()
 	if err != nil {
@@ -47,7 +48,7 @@ func run() error {
 	var allEvents map[string]*fbevents.EventData
 
 	if loadFromJSON {
-		eventsFromJSON, err := loadEventsFromJSONFile()
+		eventsFromJSON, err := loadEventsFromJSONFile(eventsJSONPath)
 		if err != nil {
 			return fmt.Errorf("load events from JSON file: %w", err)
 		}
@@ -72,7 +73,7 @@ func run() error {
 		for _, event := range allEvents {
 			eventsSlice = append(eventsSlice, event)
 		}
-		if err := dumpEventsToJSONFile(eventsSlice); err != nil {
+		if err := dumpEventsToJSONFile(eventsSlice, eventsJSONPath); err != nil {
 			return fmt.Errorf("dump events to JSON file: %w", err)
 		}
 	}
