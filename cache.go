@@ -23,7 +23,16 @@ func dumpEventsToJSONFile(events []*fbevents.EventData, eventsJSONPath string) e
 	return nil
 }
 
-func loadEventsFromJSONFile(eventsJSONPath string) ([]*fbevents.EventData, error) {
+func eventsSliceToMap(events []*fbevents.EventData) map[string]*fbevents.EventData {
+	// This also deduplicates events by converting them to a map
+	eventsMap := make(map[string]*fbevents.EventData)
+	for _, event := range events {
+		eventsMap[event.ID] = event
+	}
+	return eventsMap
+}
+
+func loadEventsFromJSONFile(eventsJSONPath string) (map[string]*fbevents.EventData, error) {
 	log.Printf("Loading events from JSON file: %s", eventsJSONPath)
 
 	eventsJSON, err := os.ReadFile(eventsJSONPath)
@@ -37,5 +46,5 @@ func loadEventsFromJSONFile(eventsJSONPath string) ([]*fbevents.EventData, error
 	}
 
 	log.Printf("Loaded %d events from JSON file: %s", len(events), eventsJSONPath)
-	return events, nil
+	return eventsSliceToMap(events), nil
 }

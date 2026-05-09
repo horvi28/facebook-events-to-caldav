@@ -27,14 +27,9 @@ func run() error {
 	var allEvents map[string]*fbevents.EventData
 
 	if args.SkipScraping {
-		eventsFromJSON, err := loadEventsFromJSONFile(eventsJSONPath)
+		allEvents, err = loadEventsFromJSONFile(eventsJSONPath)
 		if err != nil {
 			return fmt.Errorf("load events from JSON file: %w", err)
-		}
-		// Deduplicate events from JSON and convert to a map
-		allEvents = make(map[string]*fbevents.EventData)
-		for _, event := range eventsFromJSON {
-			allEvents[event.ID] = event
 		}
 	} else {
 		hostList, err := getHostList()
