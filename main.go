@@ -2,10 +2,8 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
-	"os"
 
 	"github.com/alexflint/go-arg"
 	fbevents "github.com/grucha/facebook-events-scraper"
@@ -13,32 +11,6 @@ import (
 
 type Args struct {
 	SkipScraping bool `arg:"--skip-scraping" help:"skip scraping and load events from JSON file instead (./events.json)"`
-}
-
-func getHostList() (hostList []string, err error) {
-	const hostsFilePath = "hosts.txt"
-
-	file, err := os.Open(hostsFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("open hosts file %s: %w", hostsFilePath, err)
-	}
-	defer func() {
-		if closeErr := file.Close(); closeErr != nil && err == nil {
-			err = fmt.Errorf("close hosts file %s: %w", hostsFilePath, closeErr)
-		}
-	}()
-
-	var lines []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("read hosts file %s: %w", hostsFilePath, err)
-	}
-
-	return lines, nil
 }
 
 func run() error {
