@@ -42,12 +42,7 @@ func run() error {
 			return fmt.Errorf("scrape events for hosts: %w", err)
 		}
 
-		// Dump to JSON for caching, but first convert it to a slice
-		eventsSlice := make([]*fbevents.EventData, 0, len(allEvents))
-		for _, event := range allEvents {
-			eventsSlice = append(eventsSlice, event)
-		}
-		if err := dumpEventsToJSONFile(eventsSlice, eventsJSONPath); err != nil {
+		if err := dumpEventsToJSONFile(allEvents, eventsJSONPath); err != nil {
 			return fmt.Errorf("dump events to JSON file: %w", err)
 		}
 	}
