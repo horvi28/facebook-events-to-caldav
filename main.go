@@ -7,8 +7,13 @@ import (
 	"log"
 	"os"
 
+	"github.com/alexflint/go-arg"
 	fbevents "github.com/grucha/facebook-events-scraper"
 )
+
+type Args struct {
+	SkipScraping bool `arg:"--skip-scraping" help:"skip scraping and load events from JSON file instead (./events.json)"`
+}
 
 func getHostList() (hostList []string, err error) {
 	const hostsFilePath = "hosts.txt"
@@ -37,7 +42,9 @@ func getHostList() (hostList []string, err error) {
 }
 
 func run() error {
-	const loadFromJSON = true
+	var args Args
+	arg.MustParse(&args)
+
 	const eventsJSONPath = "events.json"
 
 	config, err := loadConfig()
@@ -47,7 +54,7 @@ func run() error {
 
 	var allEvents map[string]*fbevents.EventData
 
-	if loadFromJSON {
+	if args.SkipScraping {
 		eventsFromJSON, err := loadEventsFromJSONFile(eventsJSONPath)
 		if err != nil {
 			return fmt.Errorf("load events from JSON file: %w", err)
