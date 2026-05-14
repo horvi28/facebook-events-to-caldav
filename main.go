@@ -17,34 +17,14 @@ func run() error {
 	var args Args
 	arg.MustParse(&args)
 
-	const eventsJSONPath = "events.json"
-
 	config, err := loadConfig()
 	if err != nil {
 		return fmt.Errorf("load configuration: %w", err)
 	}
 
-	var allEvents map[string]*fbevents.EventData
-
-	if args.SkipScraping {
-		allEvents, err = loadEventsFromJSONFile(eventsJSONPath)
-		if err != nil {
-			return fmt.Errorf("load events from JSON file: %w", err)
-		}
-	} else {
-		hostList, err := getHostList()
-		if err != nil {
-			return fmt.Errorf("load host list: %w", err)
-		}
-
-		allEvents, err = scrapeEventsForHosts(hostList)
-		if err != nil {
-			return fmt.Errorf("scrape events for hosts: %w", err)
-		}
-
-		if err := dumpEventsToJSONFile(allEvents, eventsJSONPath); err != nil {
-			return fmt.Errorf("dump events to JSON file: %w", err)
-		}
+	allEvents, err := loadEvents(args.SkipScraping)
+	if err != nil {
+		return err
 	}
 
 	// Convert the events to an iCal calendar and write it to a file
@@ -63,6 +43,34 @@ func run() error {
 	}
 
 	return nil
+}
+
+func loadEvents(skipScraping bool) (map[string]*fbevents.EventData, error) {
+	const eventsJSONPath = "events.json"
+
+	if skipScraping {
+		allEvents, err := loadEventsFromJSONFile(eventsJSONPath)
+		if err != nil {
+			return nil, fmt.Errorf("load events from JSON file: %w", err)
+		}
+		return allEvents, nil
+	}
+
+	hostList, err := getHostList()
+	if err != nil {
+		return nil, fmt.Errorf("load host list: %w", err)
+	}
+
+	allEvents, err := scrapeEventsForHosts(hostList)
+	if err != nil {
+		return nil, fmt.Errorf("scrape events for hosts: %w", err)
+	}
+
+	if err := dumpEventsToJSONFile(allEvents, eventsJSONPath); err != nil {
+		return nil, fmt.Errorf("dump events to JSON file: %w", err)
+	}
+
+	return allEvents, nil
 }
 
 func main() {
