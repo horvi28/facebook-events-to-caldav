@@ -42,6 +42,7 @@ func run() error {
 		}
 	}
 
+	logSummary(len(allEvents), !args.SkipScraping, !args.SkipCalendarFile, !args.SkipUpload)
 	return nil
 }
 
@@ -87,6 +88,27 @@ func writeEventsCalendar(events map[string]*fbevents.EventData) error {
 	}
 
 	return nil
+}
+
+func logSummary(eventsCount int, scrapingRun bool, calendarFileWritten bool, eventsUploaded bool) {
+	log.Printf("Summary:")
+	if scrapingRun {
+		log.Printf("Scraped %d events", eventsCount)
+	} else {
+		log.Printf("Loaded %d events from JSON file", eventsCount)
+	}
+
+	if calendarFileWritten {
+		log.Printf("Wrote events.ics")
+	} else {
+		log.Printf("Skipped events.ics")
+	}
+
+	if eventsUploaded {
+		log.Printf("Uploaded %d events to CalDAV", eventsCount)
+	} else {
+		log.Printf("Skipped CalDAV upload")
+	}
 }
 
 func main() {
