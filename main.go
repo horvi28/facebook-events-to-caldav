@@ -27,14 +27,8 @@ func run() error {
 		return err
 	}
 
-	// Convert the events to an iCal calendar and write it to a file
-	calendar, err := convertEventsToICalCalendar(allEvents)
-	if err != nil {
-		return fmt.Errorf("convert events to iCal calendar: %w", err)
-	}
-
-	if err := writeCalendarToFile(calendar, "events.ics"); err != nil {
-		return fmt.Errorf("write calendar file: %w", err)
+	if err := writeEventsCalendar(allEvents); err != nil {
+		return err
 	}
 
 	// Upload to CalDAV server
@@ -71,6 +65,22 @@ func loadEvents(skipScraping bool) (map[string]*fbevents.EventData, error) {
 	}
 
 	return allEvents, nil
+}
+
+func writeEventsCalendar(events map[string]*fbevents.EventData) error {
+	// Convert the events to an iCal calendar and write it to a file
+	const eventsCalendarPath = "events.ics"
+
+	calendar, err := convertEventsToICalCalendar(events)
+	if err != nil {
+		return fmt.Errorf("convert events to iCal calendar: %w", err)
+	}
+
+	if err := writeCalendarToFile(calendar, eventsCalendarPath); err != nil {
+		return fmt.Errorf("write calendar file: %w", err)
+	}
+
+	return nil
 }
 
 func main() {
