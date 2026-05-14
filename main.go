@@ -10,7 +10,8 @@ import (
 )
 
 type Args struct {
-	SkipScraping bool `arg:"--skip-scraping" help:"skip scraping and load events from JSON file instead (./events.json)"`
+	SkipScraping bool   `arg:"--skip-scraping" help:"skip scraping and load events from JSON file instead (./events.json)"`
+	HostsFile    string `arg:"--hosts" default:"hosts.txt" help:"path to the file that contains Facebook host URLs, for which events should be scraped"`
 }
 
 func run() error {
@@ -22,7 +23,7 @@ func run() error {
 		return fmt.Errorf("load configuration: %w", err)
 	}
 
-	allEvents, err := loadEvents(args.SkipScraping)
+	allEvents, err := loadEvents(args.SkipScraping, args.HostsFile)
 	if err != nil {
 		return err
 	}
@@ -39,7 +40,7 @@ func run() error {
 	return nil
 }
 
-func loadEvents(skipScraping bool) (map[string]*fbevents.EventData, error) {
+func loadEvents(skipScraping bool, hostsFilePath string) (map[string]*fbevents.EventData, error) {
 	const eventsJSONPath = "events.json"
 
 	if skipScraping {
@@ -50,7 +51,7 @@ func loadEvents(skipScraping bool) (map[string]*fbevents.EventData, error) {
 		return allEvents, nil
 	}
 
-	hostList, err := getHostList()
+	hostList, err := getHostList(hostsFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("load host list: %w", err)
 	}

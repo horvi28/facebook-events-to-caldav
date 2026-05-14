@@ -29,10 +29,10 @@ The `.env` file is ignored by Git so credentials stay local.
 
 ## Usage
 
-Add the Facebook profiles to the `hosts.txt` for the ones that you would like to scrape upcoming events.
+Create a `hosts.txt` file and add the Facebook profiles for which you would like to scrape events. See `hosts.example.txt` as an example. Then pass this file file with `--hosts`.
 
 Then run it. Without a CalDAV server, it will probably fail at the end, but it will still scrape the events and saves into a `events.ics` and `events.json` file.
 
 ```sh
-go run .
+go run . --hosts hosts.txt
 ```

@@ -4,11 +4,10 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strings"
 )
 
-const hostsFilePath = "hosts.txt"
-
-func getHostList() (hostList []string, err error) {
+func getHostList(hostsFilePath string) (hostList []string, err error) {
 	file, err := os.Open(hostsFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("open hosts file %s: %w", hostsFilePath, err)
@@ -22,7 +21,13 @@ func getHostList() (hostList []string, err error) {
 	var lines []string
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
+		line := strings.TrimSpace(scanner.Text())
+		// Skip empty lines and comments (lines starting with #)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+
+		lines = append(lines, line)
 	}
 
 	if err := scanner.Err(); err != nil {
