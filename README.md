@@ -36,3 +36,9 @@ Then run it. Without a CalDAV server, it will probably fail at the end, but it w
 ```sh
 go run . --hosts hosts.txt
 ```
+
+To upload only and skip writing the local `events.ics` file:
+
+```sh
+go run . --hosts hosts.txt --skip-calendar-file
+```

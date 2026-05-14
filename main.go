@@ -10,8 +10,9 @@ import (
 )
 
 type Args struct {
-	SkipScraping bool   `arg:"--skip-scraping" help:"skip scraping and load events from JSON file instead (./events.json)"`
-	HostsFile    string `arg:"--hosts" default:"hosts.txt" help:"path to the file that contains Facebook host URLs, for which events should be scraped"`
+	SkipScraping     bool   `arg:"--skip-scraping" help:"skip scraping and load events from JSON file instead (./events.json)"`
+	SkipCalendarFile bool   `arg:"--skip-calendar-file" help:"skip writing events to the local events.ics file"`
+	HostsFile        string `arg:"--hosts" default:"hosts.txt" help:"path to the file that contains Facebook host URLs, for which events should be scraped"`
 }
 
 func run() error {
@@ -28,8 +29,10 @@ func run() error {
 		return err
 	}
 
-	if err := writeEventsCalendar(allEvents); err != nil {
-		return err
+	if !args.SkipCalendarFile {
+		if err := writeEventsCalendar(allEvents); err != nil {
+			return err
+		}
 	}
 
 	// Upload to CalDAV server
