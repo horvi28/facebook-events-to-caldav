@@ -12,17 +12,13 @@ import (
 type Args struct {
 	SkipScraping     bool   `arg:"--skip-scraping" help:"skip scraping and load events from JSON file instead (./events.json)"`
 	SkipCalendarFile bool   `arg:"--skip-calendar-file" help:"skip writing events to the local events.ics file"`
+	SkipUpload       bool   `arg:"--skip-upload" help:"skip uploading events to the CalDAV server"`
 	HostsFile        string `arg:"--hosts" default:"hosts.txt" help:"path to the file that contains Facebook host URLs, for which events should be scraped"`
 }
 
 func run() error {
 	var args Args
 	arg.MustParse(&args)
-
-	config, err := loadConfig()
-	if err != nil {
-		return fmt.Errorf("load configuration: %w", err)
-	}
 
 	allEvents, err := loadEvents(args.SkipScraping, args.HostsFile)
 	if err != nil {
@@ -35,9 +31,15 @@ func run() error {
 		}
 	}
 
-	// Upload to CalDAV server
-	if err := uploadEventsToCalDAV(allEvents, config); err != nil {
-		return fmt.Errorf("upload events to CalDAV: %w", err)
+	if !args.SkipUpload {
+		config, err := loadConfig()
+		if err != nil {
+			return fmt.Errorf("load configuration: %w", err)
+		}
+
+		if err := uploadEventsToCalDAV(allEvents, config); err != nil {
+			return fmt.Errorf("upload events to CalDAV: %w", err)
+		}
 	}
 
 	return nil

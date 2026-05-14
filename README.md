@@ -42,3 +42,9 @@ To upload only and skip writing the local `events.ics` file:
 ```sh
 go run . --hosts hosts.txt --skip-calendar-file
 ```
+
+To write local files only and skip uploading to CalDAV:
+
+```sh
+go run . --hosts hosts.txt --skip-upload
+```
