@@ -48,7 +48,8 @@ func scrapeEventsForHosts(hostUrls []string) (map[string]*fbevents.EventData, er
 			if len(scrapeErrors) > maxFailedHostCount {
 				return eventsMap, fmt.Errorf("stop scraping after %d failed hosts: %w", len(scrapeErrors), errors.Join(scrapeErrors...))
 			}
-			sleepRandom(randomGenerator, 1*time.Hour, 2*time.Hour)
+			// If a host fails, sleep for 30-60 minutes before continuing, just to be safe and avoid hitting Facebook too hard
+			sleepRandom(randomGenerator, 30*time.Minute, 60*time.Minute)
 			continue // Skip this host and continue with next
 		}
 
