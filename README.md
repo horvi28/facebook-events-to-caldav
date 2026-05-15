@@ -1,9 +1,11 @@
 # Facebook Event Scraper
 
+A Facebook event scraper that scrapes upcoming events from a list of Facebook hosts. It can also write events to an iCalendar file or upload each event to a CalDAV server.
+
 > [!WARNING]
 > WIP: This project is in an early stage and a work in progress. I started it as a way to learn the Go language.
-
-A facebook event scraper, that scrapes upcoming events from a list of Facebook hosts, writes them to an iCalendar file, and can upload each event to a CalDAV server.
+>
+> **Disclaimer:** Facebook's Terms of Service explicitly prohibit scraping data from their website. Use this project at your own risk.
 
 ## Features
 
@@ -14,22 +16,9 @@ A facebook event scraper, that scrapes upcoming events from a list of Facebook h
 - Can upload individual `.ics` events to a CalDAV server.
 - Supports `.env` based configuration for CalDAV credentials.
 
-## Configuration
-
-Create a local `.env` file using `.env.example` as the template:
-
-```env
-CALDAV_URL=http://localhost:5232
-CALDAV_USERNAME=your-username
-CALDAV_PASSWORD=your-password
-CALDAV_CALENDAR_PATH=/your-user/your-calendar-id/
-```
-
-The `.env` file is ignored by Git so credentials stay local. CalDAV configuration is only needed when running with `--upload-caldav`.
-
 ## Usage
 
-Create a `hosts.txt` file and add the Facebook profiles for which you would like to scrape events. See `hosts.example.txt` as an example. Lines starting with `#` are ignored.
+Create a `hosts.txt` file and add the Facebook profiles you want to scrape events from. See `hosts.example.txt` as an example. Empty lines and lines starting with `#` are ignored.
 
 ### Arguments
 
@@ -45,13 +34,13 @@ Create a `hosts.txt` file and add the Facebook profiles for which you would like
 ### Examples
 
 ```sh
-# By default, the scraper reads `hosts.txt`, scrapes events, and writes the events to only a cache (events.json):
+# By default, the scraper reads `hosts.txt`, scrapes events, and writes only the cache (`events.json`):
 go run .
 
 # Use custom input and output paths:
 go run . --hosts private-hosts.txt --cache-file path-to-events.json --write-calendar --calendar-file path-to-events.ics
 
-# Write a local calendar file (this will create an `events.ics` file in the current directory):
+# Write a local calendar file. This creates `events.ics` in the current directory:
 go run . --write-calendar
 
 # Write a local calendar file to another path:
@@ -63,3 +52,40 @@ go run . --upload-caldav
 # Load events from the cache (events.json) instead of scraping:
 go run . --from-cache
 ```
+
+## Configuration
+
+Create a local `.env` file using `.env.example` as a template:
+
+```env
+CALDAV_URL=http://localhost:5232
+CALDAV_USERNAME=your-username
+CALDAV_PASSWORD=your-password
+CALDAV_CALENDAR_PATH=/your-user/your-calendar-id/
+```
+
+The `.env` file is ignored by Git so credentials stay local. CalDAV configuration is only needed when running with `--upload-caldav`.
+
+## Scraping behavior
+
+This project uses [`grucha/facebook-events-scraper`](https://github.com/grucha/facebook-events-scraper) to scrape Facebook event data. All credit for the scraper package goes to its original author. This project is a wrapper around it.
+
+The scraper only requests upcoming events. Past events are not included.
+
+To avoid hitting Facebook too hard, the scraper waits between hosts:
+
+- 2-5 seconds after each host
+- 60-120 seconds after every 15 hosts
+- 30-60 minutes after a failed host before continuing
+
+The host list is processed one host at a time. Events are deduplicated by Facebook event ID, so if the same event appears for multiple hosts, it is only kept once.
+
+## Credits
+
+This project directly uses these open source packages:
+
+- [`grucha/facebook-events-scraper`](https://github.com/grucha/facebook-events-scraper) for scraping Facebook event data.
+- [`arran4/golang-ical`](https://github.com/arran4/golang-ical) for creating iCalendar files.
+- [`alexflint/go-arg`](https://github.com/alexflint/go-arg) for command line argument parsing.
+- [`caarlos0/env`](https://github.com/caarlos0/env) for parsing environment variables.
+- [`joho/godotenv`](https://github.com/joho/godotenv) for loading local `.env` files.
