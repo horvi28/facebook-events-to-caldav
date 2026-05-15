@@ -80,6 +80,14 @@ To avoid hitting Facebook too hard, the scraper waits between hosts:
 
 The host list is processed one host at a time. Events are deduplicated by Facebook event ID, so if the same event appears for multiple hosts, it is only kept once.
 
+## My setup
+
+I run this project regularly on my server and upload the scraped events to a [Radicale](https://radicale.org/) CalDAV server.
+
+On Android, I use [DAVx5](https://www.davx5.com/) to sync the CalDAV calendar to my phone and [KashCal](https://kashcal.onekash.org/) to view the events. It also works with **Google Calendar**, but I wanted to keep these events in a separate app. [Etar Calendar](https://github.com/Etar-Group/Etar-Calendar) works well too.
+
+On the web, I use [InfCloud](https://inf-it.com/open-source/clients/infcloud/) as a CalDAV client, mostly because I have not found another lightweight standalone web client that fits this setup yet.
+
 ## Credits
 
 This project directly uses these open source packages:
