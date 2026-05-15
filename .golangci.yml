@@ -18,6 +18,9 @@ linters:
     - errcheck
     - errchkjson
     - errorlint
+    - errname
+    - exptostd
+    - funcorder
     - funlen
     - gocognit
     - goconst
@@ -25,17 +28,23 @@ linters:
     - govet
     - iface
     - ineffassign
+    - interfacebloat
+    - intrange
     - importas
     - maintidx
     - misspell
     - modernize
+    - musttag
+    - nestif
     - nilerr
     - nilnesserr
     - nilnil
     - noctx
+    - perfsprint
     - prealloc
     - predeclared
     - revive
+    - sloglint
     - staticcheck
     - tagalign
     - tagliatelle

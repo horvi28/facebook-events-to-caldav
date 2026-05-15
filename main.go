@@ -2,6 +2,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 
@@ -56,7 +57,7 @@ func run() error {
 
 func validateArgs(args Args) error {
 	if !args.WriteCalendar && args.CalendarFile != defaultCalendarFilePath {
-		return fmt.Errorf("--calendar-file requires --write-calendar")
+		return errors.New("--calendar-file requires --write-calendar")
 	}
 
 	return nil
