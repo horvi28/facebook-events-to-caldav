@@ -50,3 +50,6 @@ linters:
   settings:
     cyclop:
       max-complexity: 12
+    tagalign:
+      sort: true
+      strict: true
