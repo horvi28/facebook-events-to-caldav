@@ -43,14 +43,25 @@ func createICalEventFromEventData(event *fbevents.EventData) (*ics.VEvent, error
 		vevent.SetEndAt(eventEnd)
 	}
 
+	// Set location if available
 	if event.Location != nil && event.Location.Name != "" {
 		vevent.SetLocation(event.Location.Name)
+	}
+	if event.Location != nil && event.Location.Coordinates != nil {
+		vevent.SetGeo(event.Location.Coordinates.Latitude, event.Location.Coordinates.Longitude)
+	}
+
+	if event.IsCanceled {
+		vevent.SetStatus(ics.ObjectStatusCancelled)
 	}
 
 	vevent.SetColor("#FF0000") // Default color (red)
 	// Set color based on event category if available (using the first category as a simple heuristic)
 	if len(event.Categories) > 0 {
 		vevent.SetColor(getEventColorBasedOnCategory(event.Categories[0]))
+	}
+	for _, category := range event.Categories {
+		vevent.AddCategory(category.Label)
 	}
 	vevent.SetDtStampTime(time.Now())
 	vevent.SetLastModifiedAt(time.Now())
