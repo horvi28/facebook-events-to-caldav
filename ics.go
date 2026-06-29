@@ -31,8 +31,8 @@ func createICalEventFromEventData(event *fbevents.EventData) (*ics.VEvent, error
 	vevent.SetSummary(event.Name)
 	vevent.SetURL(event.URL)
 
-	// Add the URL to the end of the description as well
-	vevent.SetDescription(event.Description + "\n\n" + event.URL)
+	// Add the URL to the start of the description as well
+	vevent.SetDescription(event.URL + "\n\n" + event.Description)
 
 	eventStart := time.Unix(event.StartTimestamp, 0)
 	vevent.SetStartAt(eventStart)
