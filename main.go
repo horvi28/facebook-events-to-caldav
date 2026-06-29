@@ -25,8 +25,8 @@ func run() error {
 	var args Args
 	arg.MustParse(&args)
 
-	if err := validateArgs(args); err != nil {
-		return err
+	if !args.WriteCalendar && args.CalendarFile != defaultCalendarFilePath {
+		return errors.New("--calendar-file requires --write-calendar")
 	}
 
 	allEvents, err := loadEvents(args.HostsFile, args.FromCache, args.CacheFile)
@@ -52,14 +52,6 @@ func run() error {
 	}
 
 	logSummary(len(allEvents), args)
-	return nil
-}
-
-func validateArgs(args Args) error {
-	if !args.WriteCalendar && args.CalendarFile != defaultCalendarFilePath {
-		return errors.New("--calendar-file requires --write-calendar")
-	}
-
 	return nil
 }
 
