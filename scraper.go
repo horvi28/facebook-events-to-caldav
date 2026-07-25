@@ -28,7 +28,8 @@ func scrapeEventsForHost(hostURL string) ([]*fbevents.EventData, error) {
 	return events, nil
 }
 
-func scrapeEventsForHosts(hostUrls []string) (map[string]*fbevents.EventData, error) {
+func scrapeEventsForHosts(config *HostConfig) (map[string]*fbevents.EventData, error) {
+	hostUrls := config.Hosts
 	log.Printf("Start scraping events for %d hosts", len(hostUrls))
 
 	// Use a map to automatically deduplicate by event ID
@@ -56,6 +57,12 @@ func scrapeEventsForHosts(hostUrls []string) (map[string]*fbevents.EventData, er
 		// Add events to map (duplicates automatically overwritten)
 		for _, event := range events {
 			eventsMap[event.ID] = event
+
+			// Facebook rarely sets categories for events, so fall back to the host's own
+			// category from the config to not have everything with the same color.
+			// It is appended to the front as the first category will be used for the color.
+			fallbackCategory := fbevents.EventCategory{Label: config.CategoryOf[hostURL]}
+			event.Categories = append([]fbevents.EventCategory{fallbackCategory}, event.Categories...)
 		}
 		log.Printf("Added %d events from %s (total unique: %d)", len(events), hostURL, len(eventsMap))
 

@@ -25,11 +25,17 @@ func run() error {
 	var args Args
 	arg.MustParse(&args)
 
+	// If the user has added a separate calendar file, but --write-calendar is no given, throw an error
 	if !args.WriteCalendar && args.CalendarFile != defaultCalendarFilePath {
 		return errors.New("--calendar-file requires --write-calendar")
 	}
 
-	allEvents, err := loadEvents(args.HostsFile, args.FromCache, args.CacheFile)
+	hostConfig, err := loadHostConfig(args.HostsFile)
+	if err != nil {
+		return err
+	}
+
+	allEvents, err := loadEvents(hostConfig, args.FromCache, args.CacheFile)
 	if err != nil {
 		return err
 	}
@@ -55,7 +61,7 @@ func run() error {
 	return nil
 }
 
-func loadEvents(hostsFilePath string, fromCache bool, cacheFilePath string) (map[string]*fbevents.EventData, error) {
+func loadEvents(hostConfig *HostConfig, fromCache bool, cacheFilePath string) (map[string]*fbevents.EventData, error) {
 	if fromCache {
 		allEvents, err := loadEventsFromJSONFile(cacheFilePath)
 		if err != nil {
@@ -64,12 +70,7 @@ func loadEvents(hostsFilePath string, fromCache bool, cacheFilePath string) (map
 		return allEvents, nil
 	}
 
-	hostList, err := getHostList(hostsFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("load host list: %w", err)
-	}
-
-	allEvents, err := scrapeEventsForHosts(hostList)
+	allEvents, err := scrapeEventsForHosts(hostConfig)
 	if err != nil {
 		return nil, fmt.Errorf("scrape events for hosts: %w", err)
 	}
