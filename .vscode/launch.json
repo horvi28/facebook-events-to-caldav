@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "From cache",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--from-cache",
+                "--write-calendar",
+                "--upload-caldav"
+            ]
+        },
+        {
+            "name": "Scrape",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}",
+            "cwd": "${workspaceFolder}",
+            "args": [
+                "--write-calendar"
+            ]
+        }
+    ]
+}
