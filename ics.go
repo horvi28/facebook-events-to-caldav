@@ -55,44 +55,29 @@ func createICalEventFromEventData(event *fbevents.EventData, colorByCategory map
 		vevent.SetStatus(ics.ObjectStatusCancelled)
 	}
 
-	vevent.SetColor("#FF0000") // Default color (red)
-	// Set color based on event category if available (using the first category as a simple heuristic)
-	if len(event.Categories) > 0 {
-		vevent.SetColor(getEventColorBasedOnCategory(event.Categories[0], colorByCategory))
-	}
+	// Set color based on event category if available (The first match will win)
+	vevent.SetColor(getEventColorBasedOnCategory(event.Categories, colorByCategory))
+
 	for _, category := range event.Categories {
 		vevent.AddCategory(category.Label)
 	}
+
 	vevent.SetDtStampTime(time.Now())
 	vevent.SetLastModifiedAt(time.Now())
 
 	return vevent, nil
 }
 
-func getEventColorBasedOnCategory(category fbevents.EventCategory, colorByCategory map[string]string) string {
-	if color := colorByCategory[category.Label]; color != "" {
-		return color
+func getEventColorBasedOnCategory(categories []fbevents.EventCategory, colorByCategory map[string]string) string {
+	// The first category which is in the map will win
+	for _, category := range categories {
+		if color := colorByCategory[category.Label]; color != "" {
+			return color
+		}
 	}
 
-	// Unfortunately, Facebook does not give a category for every event
-	switch category.Label {
-	case "Music":
-		return "#1DB954" // Spotify green
-	case "Sports":
-		return "#40E0D0" // Turquoise
-	case "Party":
-		return "#FFD700" // Gold
-	case "Film":
-		return "#0000FF" // Blue
-	case "Gardening":
-		return "#006400" // Dark green
-	case "Theater":
-		return "#800080" // Purple
-	case "Games":
-		return "#FF69B4" // Hot pink
-	default:
-		return "#FF0000" // Default color (red)
-	}
+	// Then fall back to the default color (Red)
+	return "#FF0000"
 }
 
 func convertSingleEventToICal(event *fbevents.EventData, colorByCategory map[string]string) (*ics.Calendar, error) {
