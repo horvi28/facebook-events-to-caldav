@@ -9,36 +9,38 @@ A Facebook event scraper that scrapes upcoming events from a list of Facebook ho
 
 ## Features
 
-- Scrapes upcoming events from Facebook host URLs listed in `hosts.txt`.
+- Scrapes upcoming events from Facebook host URLs grouped by category in `hosts.yaml`.
 - Deduplicates events by Facebook event ID.
-- Can write a local `events.ics` calendar file.
+- Can write a local `events.ics` calendar file, colored by your own per-category colors.
 - Caches scraped event data in `events.json` for faster local development.
 - Can upload individual `.ics` events to a CalDAV server.
 - Supports `.env` based configuration for CalDAV credentials.
 
 ## Usage
 
-Create a `hosts.txt` file and add the Facebook profiles you want to scrape events from. See `hosts.example.txt` as an example. Empty lines and lines starting with `#` are ignored.
+Create a `hosts.yaml` file grouping the Facebook profiles you want to scrape under your own categories.
+Each category may set an optional `color` (hex) used for its events in the calendar.
+Facebook rarely tags events with a category, so the one you assign drives the color. See `hosts.example.yaml` for the format.
 
 ### Arguments
 
-| Argument           | Default       | Description                                                    |
-| ------------------ | ------------- | -------------------------------------------------------------- |
-| `--hosts`          | `hosts.txt`   | Path to the file containing Facebook host URLs.                |
-| `--from-cache`     | `false`       | Load events from the cache file instead of scraping Facebook.  |
-| `--cache-file`     | `events.json` | Path to the JSON cache file.                                   |
-| `--write-calendar` | `false`       | Write events to a local iCalendar file.                        |
-| `--calendar-file`  | `events.ics`  | Path to the local iCalendar file. Requires `--write-calendar`. |
-| `--upload-caldav`  | `false`       | Upload events to the configured CalDAV server.                 |
+| Argument           | Default       | Description                                                     |
+| ------------------ | ------------- | --------------------------------------------------------------- |
+| `--hosts`          | `hosts.yaml`  | Path to the YAML file mapping categories to Facebook host URLs. |
+| `--from-cache`     | `false`       | Load events from the cache file instead of scraping Facebook.   |
+| `--cache-file`     | `events.json` | Path to the JSON cache file.                                    |
+| `--write-calendar` | `false`       | Write events to a local iCalendar file.                         |
+| `--calendar-file`  | `events.ics`  | Path to the local iCalendar file. Requires `--write-calendar`.  |
+| `--upload-caldav`  | `false`       | Upload events to the configured CalDAV server.                  |
 
 ### Examples
 
 ```sh
-# By default, the scraper reads `hosts.txt`, scrapes events, and writes only the cache (`events.json`):
+# By default, the scraper reads `hosts.yaml`, scrapes events, and writes only the cache (`events.json`):
 go run .
 
 # Use custom input and output paths:
-go run . --hosts private-hosts.txt --cache-file path-to-events.json --write-calendar --calendar-file path-to-events.ics
+go run . --hosts private-hosts.yaml --cache-file path-to-events.json --write-calendar --calendar-file path-to-events.ics
 
 # Write a local calendar file. This creates `events.ics` in the current directory:
 go run . --write-calendar

@@ -13,7 +13,7 @@ import (
 const defaultCalendarFilePath = "events.ics"
 
 type Args struct {
-	HostsFile     string `arg:"--hosts"          default:"hosts.txt"   help:"Path to the file that contains Facebook host URLs, for which events should be scraped"`
+	HostsFile     string `arg:"--hosts"          default:"hosts.yaml"  help:"Path to the YAML file that contains Facebook host URLs, for which events should be scraped (mapped to categories with colors)"`
 	FromCache     bool   `arg:"--from-cache"                           help:"Load events from the cache file instead of scraping"`
 	CacheFile     string `arg:"--cache-file"     default:"events.json" help:"Path to the cache file"`
 	WriteCalendar bool   `arg:"--write-calendar"                       help:"Write events into a local calendar file"`
