@@ -35,14 +35,14 @@ func doRequest(httpClient *http.Client, method, url, username, password string, 
 }
 
 // uploadEventToCalDAV uploads a single event to the CalDAV server
-func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData, config Config) (err error) {
+func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData, config Config, colorByCategory map[string]string) (err error) {
 	if event == nil {
 		return errors.New("event cannot be nil")
 	}
 	log.Printf("Uploading event: '%s' ...", event.Name)
 
 	// Create a single-event calendar
-	calendar, err := convertSingleEventToICal(event)
+	calendar, err := convertSingleEventToICal(event, colorByCategory)
 	if err != nil {
 		return fmt.Errorf("convert event %q to iCal: %w", event.Name, err)
 	}
@@ -78,7 +78,7 @@ func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData, con
 }
 
 // uploadEventsToCalDAV uploads all events to the CalDAV server
-func uploadEventsToCalDAV(events map[string]*fbevents.EventData, config Config) error {
+func uploadEventsToCalDAV(events map[string]*fbevents.EventData, config Config, colorByCategory map[string]string) error {
 	// Create a HTTP client with timeout
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
@@ -87,7 +87,7 @@ func uploadEventsToCalDAV(events map[string]*fbevents.EventData, config Config) 
 	// Upload each event
 	var uploadErrors []error
 	for _, event := range events {
-		err := uploadEventToCalDAV(httpClient, event, config)
+		err := uploadEventToCalDAV(httpClient, event, config, colorByCategory)
 		if err != nil {
 			uploadErrors = append(uploadErrors, err)
 		}

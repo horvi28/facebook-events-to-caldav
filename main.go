@@ -52,7 +52,7 @@ func run() error {
 			return fmt.Errorf("load configuration: %w", err)
 		}
 
-		if err := uploadEventsToCalDAV(allEvents, config); err != nil {
+		if err := uploadEventsToCalDAV(allEvents, config, hostConfig.ColorOf); err != nil {
 			return fmt.Errorf("upload events to CalDAV: %w", err)
 		}
 	}
