@@ -41,7 +41,7 @@ func run() error {
 	}
 
 	if args.WriteCalendar {
-		if err := writeEventsCalendar(allEvents, args.CalendarFile); err != nil {
+		if err := writeEventsCalendar(allEvents, args.CalendarFile, hostConfig.ColorOf); err != nil {
 			return err
 		}
 	}
@@ -82,9 +82,9 @@ func loadEvents(hostConfig *HostConfig, fromCache bool, cacheFilePath string) (m
 	return allEvents, nil
 }
 
-func writeEventsCalendar(events map[string]*fbevents.EventData, eventsCalendarPath string) error {
+func writeEventsCalendar(events map[string]*fbevents.EventData, eventsCalendarPath string, colorByCategory map[string]string) error {
 	// Convert the events to an iCal calendar and write it to a file
-	calendar, err := convertEventsToICalCalendar(events)
+	calendar, err := convertEventsToICalCalendar(events, colorByCategory)
 	if err != nil {
 		return fmt.Errorf("convert events to iCal calendar: %w", err)
 	}

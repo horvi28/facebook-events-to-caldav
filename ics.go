@@ -19,7 +19,7 @@ func createCalendar() *ics.Calendar {
 	return calendar
 }
 
-func createICalEventFromEventData(event *fbevents.EventData) (*ics.VEvent, error) {
+func createICalEventFromEventData(event *fbevents.EventData, colorByCategory map[string]string) (*ics.VEvent, error) {
 	if event == nil {
 		return nil, errors.New("event cannot be nil")
 	}
@@ -58,7 +58,7 @@ func createICalEventFromEventData(event *fbevents.EventData) (*ics.VEvent, error
 	vevent.SetColor("#FF0000") // Default color (red)
 	// Set color based on event category if available (using the first category as a simple heuristic)
 	if len(event.Categories) > 0 {
-		vevent.SetColor(getEventColorBasedOnCategory(event.Categories[0]))
+		vevent.SetColor(getEventColorBasedOnCategory(event.Categories[0], colorByCategory))
 	}
 	for _, category := range event.Categories {
 		vevent.AddCategory(category.Label)
@@ -69,7 +69,11 @@ func createICalEventFromEventData(event *fbevents.EventData) (*ics.VEvent, error
 	return vevent, nil
 }
 
-func getEventColorBasedOnCategory(category fbevents.EventCategory) string {
+func getEventColorBasedOnCategory(category fbevents.EventCategory, colorByCategory map[string]string) string {
+	if color := colorByCategory[category.Label]; color != "" {
+		return color
+	}
+
 	// Unfortunately, Facebook does not give a category for every event
 	switch category.Label {
 	case "Music":
@@ -91,8 +95,8 @@ func getEventColorBasedOnCategory(category fbevents.EventCategory) string {
 	}
 }
 
-func convertSingleEventToICal(event *fbevents.EventData) (*ics.Calendar, error) {
-	vevent, err := createICalEventFromEventData(event)
+func convertSingleEventToICal(event *fbevents.EventData, colorByCategory map[string]string) (*ics.Calendar, error) {
+	vevent, err := createICalEventFromEventData(event, colorByCategory)
 	if err != nil {
 		return nil, fmt.Errorf("create iCal event: %w", err)
 	}
@@ -103,7 +107,7 @@ func convertSingleEventToICal(event *fbevents.EventData) (*ics.Calendar, error) 
 	return calendar, nil
 }
 
-func convertEventsToICalCalendar(events map[string]*fbevents.EventData) (*ics.Calendar, error) {
+func convertEventsToICalCalendar(events map[string]*fbevents.EventData, colorByCategory map[string]string) (*ics.Calendar, error) {
 	log.Printf("Converting %d events to iCal calendar", len(events))
 	// Create calendar
 	calendar := createCalendar()
@@ -111,7 +115,7 @@ func convertEventsToICalCalendar(events map[string]*fbevents.EventData) (*ics.Ca
 	// Add events to the calendar
 	labels := make(map[string]int) // To track unique labels for logging
 	for _, event := range events {
-		vevent, err := createICalEventFromEventData(event)
+		vevent, err := createICalEventFromEventData(event, colorByCategory)
 		if err != nil {
 			return nil, fmt.Errorf("create iCal event: %w", err)
 		}
