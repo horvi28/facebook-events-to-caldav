@@ -1,4 +1,4 @@
 .env
 events.ics
 events.json
-hosts.txt
+hosts.yaml

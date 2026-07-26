@@ -1,3 +1,0 @@
-# Add those Facebook profiles for which you would like to scrape the upcoming events
-# Empty lines and lines starting with '#' will be skipped
-https://www.facebook.com/Meta/

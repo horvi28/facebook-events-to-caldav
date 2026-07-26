@@ -1,0 +1,28 @@
+# Facebook profiles to scrape, grouped by your own category.
+#
+# - Each top-level key is a category name.
+# - `color` (optional) is a hex color used for that category's events in the
+#   calendar. Omit it to use the default. It is fixed as Red (#FF0000) currently.
+# - `hosts` lists the profile URLs under that category. Facebook rarely tags
+#   events with a category, so the one you assign here drives the color.
+
+# It supports two type of profile URLs
+# - The simple one: https://www.facebook.com/ironmaiden
+# - The profile slug: https://www.facebook.com/profile.php?id=<id>
+# For the latter one you can add inline comments to remember what it is
+
+Music:
+  color: "#1DB954"
+  hosts:
+    - https://www.facebook.com/ironmaiden
+    - https://www.facebook.com/Metallica
+
+Sports:
+  color: "#40E0D0"
+  hosts:
+    - https://www.facebook.com/NFL
+
+# Category with no color falls back to the built-in default (Red).
+Other:
+  hosts:
+    - https://www.facebook.com/Meta/
