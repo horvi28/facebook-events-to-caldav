@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	ics "github.com/arran4/golang-ical"
@@ -31,8 +32,20 @@ func createICalEventFromEventData(event *fbevents.EventData, colorByCategory map
 	vevent.SetSummary(event.Name)
 	vevent.SetURL(event.URL)
 
-	// Add the URL to the start of the description as well
-	vevent.SetDescription(event.URL + "\n\n" + event.Description)
+	description := event.Description
+
+	// Add the first host as organizer
+	// And add the other oganizers to the beginning of the description
+	if len(event.Hosts) != 0 {
+		vevent.SetOrganizer(event.Hosts[0].Name)
+		organizers := getOrganizersAsString(event.Hosts)
+
+		description = organizers + "\n\n" + description
+	}
+
+	// Add the URL to the end of the description as well
+	description = description + "\n\n" + event.URL
+	vevent.SetDescription(description)
 
 	eventStart := time.Unix(event.StartTimestamp, 0)
 	vevent.SetStartAt(eventStart)
@@ -66,6 +79,16 @@ func createICalEventFromEventData(event *fbevents.EventData, colorByCategory map
 	vevent.SetLastModifiedAt(time.Now())
 
 	return vevent, nil
+}
+
+func getOrganizersAsString(hosts []fbevents.EventHost) string {
+	// First extract only the names
+	organizers := make([]string, len(hosts))
+	for i, host := range hosts {
+		organizers[i] = host.Name
+	}
+
+	return strings.Join(organizers, ", ")
 }
 
 func getEventColorBasedOnCategory(categories []fbevents.EventCategory, colorByCategory map[string]string) string {
