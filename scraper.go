@@ -56,6 +56,11 @@ func scrapeEventsForHosts(config *HostConfig) (map[string]*fbevents.EventData, e
 
 		// Add events to map (duplicates automatically overwritten)
 		for _, event := range events {
+			// Skip the cancelled events
+			if event.IsCanceled {
+				continue
+			}
+
 			eventsMap[event.ID] = event
 
 			// Facebook rarely sets categories for events, so fall back to the host's own
