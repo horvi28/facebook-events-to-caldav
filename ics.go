@@ -78,6 +78,13 @@ func createICalEventFromEventData(event *fbevents.EventData, colorByCategory map
 	vevent.SetDtStampTime(time.Now())
 	vevent.SetLastModifiedAt(time.Now())
 
+	// Bump SEQUENCE on every run so CalDAV clients treat the re-uploaded event
+	// as changed and refresh all attributes.
+	// We do not have access to the previous value, so doing a workaround with Unix timestamp.
+	// Unix seconds are monotonically increasing, guaranteeing each upload outranks the previous.
+	// int is fine for now, some clients treat SEQUENCE as int32 (ok until 2038)
+	vevent.SetSequence(int(time.Now().Unix()))
+
 	return vevent, nil
 }
 
