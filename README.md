@@ -12,7 +12,8 @@ A Facebook event scraper that scrapes upcoming events from a list of Facebook ho
 - Scrapes upcoming events from Facebook host URLs grouped by category in `hosts.yaml`.
 - Deduplicates events by Facebook event ID.
 - Can write a local `events.ics` calendar file, colored by your own per-category colors.
-- Caches scraped event data in `events.json` for faster local development.
+- Keeps the scraped events in `events.json`, which doubles as the record of what has already been fetched, so the details of an event are only ever requested once. See [The event cache](#the-event-cache) section.
+- Drops events from the cache once they are over, so it does not grow without end.
 - Can upload individual `.ics` events to a CalDAV server.
 - Supports `.env` based configuration for CalDAV credentials.
 
@@ -74,11 +75,45 @@ This project uses [`grucha/facebook-events-scraper`](https://github.com/grucha/f
 
 The scraper only requests upcoming events. Past events are not included.
 
-To avoid hitting Facebook too hard, the scraper waits between hosts:
+### How many requests a scrape costs
 
-- 2-5 seconds after each host
-- 60-120 seconds after every 15 hosts
-- 30-60 minutes after a failed host before continuing
+Scraping a host is not a single request. It happens in two phases:
+
+1. **Listing** the host's upcoming events. One request, and it returns only a summary of each event.
+2. **Fetching the details** of an event. One request *per event*, for the details of the event.
+
+So a host with 20 upcoming events would cost 21 requests, and the detail requests are by far the larger part of the total. To try to keep that number down and event cache is used.
+
+### The event cache
+
+`events.json` is not only a convenience for local development, it is what makes the scraping cheap. It holds every event known so far, and the IDs in it are what the scraper checks to decide whether a detail request can be skipped.
+
+The flow is the following:
+
+- Each run loads the cache and drops the events that are already passed. -> This way it will not grow forever.
+- Scrapes the new events, but only those, which is not in the `events.json`.
+- Merges the new events into the cache.
+
+In practice this means the first run is expensive and later runs are cheaper, as they only pay for the events that are genuinely new.
+
+Two consequences worth knowing:
+
+- **Event details are never refreshed.** If a location or a start time changes after the event was first cached, the change is not picked up. Delete the event from `events.json` (or the whole file) to force a re-fetch. -> This might change with a heuristic in the future, but for now, this can save a lot of request.
+- **Moving a profile to another category does not recolor its existing events.** The category is stamped onto an event when its details are scraped, so only events scraped after the change get the new color.
+
+> [!WARNING]
+> Deleting `events.json` means the next run fetches the details of **every** listed event again. For a large `hosts.yaml` that is several hundred extra requests in one go, which is exactly the kind of traffic that gets noticed. Only delete it when you actually want a full re-scrape.
+
+Events are kept for 48 hours after they end, so a scrape running in the evening does not empty out the current day. An event without an end time, which is roughly half of them, counts as ending when it starts.
+
+### Pacing
+
+To avoid hitting Facebook too hard, the scraper waits:
+
+- 5-20 seconds between the detail requests of two events
+- 10-30 seconds after each host
+- 10-20 minutes after every 10 hosts
+- 1-2 hours after a failed host before continuing, and it gives up entirely once more than 5 hosts have failed
 
 The host list is processed one host at a time. Events are deduplicated by Facebook event ID, so if the same event appears for multiple hosts, it is only kept once.
 
