@@ -15,12 +15,30 @@ func sleepRandom(r *rand.Rand, minimumDuration, maximumDuration time.Duration) {
 	time.Sleep(duration)
 }
 
+// shouldScrapeEventDetails tells whether the details of a listed event have to
+// be requested. Every false here saves one request.
+func shouldScrapeEventDetails(shortEvent fbevents.ShortEventData, cachedEvents map[string]*fbevents.EventData) bool {
+	// A cancelled event is not needed
+	if shortEvent.IsCanceled {
+		return false
+	}
+
+	// The details of an event are only ever scraped once. The merge with the
+	// cache is what keeps an already known event in the calendar.
+	_, isAlreadyInCache := cachedEvents[shortEvent.ID]
+
+	return !isAlreadyInCache
+}
+
 // scrapeEventsForHost fetches the host's event list and then the full details of
-// each listed event.
+// each listed event that is not in the cache yet.
 //
 // This is what fbevents.ScrapeFbEventListFull does internally, but driving the
-// loop here lets us sleep between the event detail requests.
-func scrapeEventsForHost(hostURL string, randomGenerator *rand.Rand) ([]*fbevents.EventData, error) {
+// loop here lets us sleep between the event detail requests and skip the ones
+// we already know. Listing a host costs a single request while its details cost
+// one request per event, so skipping the known ones is what keeps the number of
+// requests low.
+func scrapeEventsForHost(hostURL string, cachedEvents map[string]*fbevents.EventData, randomGenerator *rand.Rand) ([]*fbevents.EventData, error) {
 	options := &fbevents.Options{
 		IncludePastEvents: false,
 	}
@@ -34,9 +52,10 @@ func scrapeEventsForHost(hostURL string, randomGenerator *rand.Rand) ([]*fbevent
 	log.Printf("Listed %d events for %s", len(shortEvents), hostURL)
 
 	events := make([]*fbevents.EventData, 0, len(shortEvents))
+	skippedCount := 0
 	for _, shortEvent := range shortEvents {
-		// Skip detailes for cancelled events
-		if shortEvent.IsCanceled {
+		if !shouldScrapeEventDetails(shortEvent, cachedEvents) {
+			skippedCount++
 			continue
 		}
 
@@ -50,11 +69,13 @@ func scrapeEventsForHost(hostURL string, randomGenerator *rand.Rand) ([]*fbevent
 		events = append(events, event)
 	}
 
-	log.Printf("Scraped %d events for %s", len(events), hostURL)
+	log.Printf("Scraped %d new events for %s, skipped %d cancelled or already cached ones", len(events), hostURL, skippedCount)
 	return events, nil
 }
 
-func scrapeEventsForHosts(config *HostConfig) (map[string]*fbevents.EventData, error) {
+// scrapeEventsForHosts scrapes every host in the config. The cached events are
+// only read, to tell which event details can be skipped.
+func scrapeEventsForHosts(config *HostConfig, cachedEvents map[string]*fbevents.EventData) (map[string]*fbevents.EventData, error) {
 	hostUrls := config.Hosts
 	log.Printf("Start scraping events for %d hosts", len(hostUrls))
 
@@ -68,7 +89,7 @@ func scrapeEventsForHosts(config *HostConfig) (map[string]*fbevents.EventData, e
 	for index, hostURL := range hostUrls {
 		eventNumber := index + 1
 		log.Printf("[%d/%d] Scraping events for %s", eventNumber, len(hostUrls), hostURL)
-		events, err := scrapeEventsForHost(hostURL, randomGenerator)
+		events, err := scrapeEventsForHost(hostURL, cachedEvents, randomGenerator)
 		if err != nil {
 			log.Printf("Skipping host after scrape failure: %s: %v", hostURL, err)
 			scrapeErrors = append(scrapeErrors, err)

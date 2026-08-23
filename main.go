@@ -80,7 +80,7 @@ func loadEvents(hostConfig *HostConfig, fromCache bool, cacheFilePath string) (m
 	// Drop the events that are over, otherwise the cache would only grow
 	cachedEvents = pruneOutdatedEvents(cachedEvents, time.Now())
 
-	scrapedEvents, err := scrapeEventsForHosts(hostConfig)
+	scrapedEvents, err := scrapeEventsForHosts(hostConfig, cachedEvents)
 	if err != nil {
 		return nil, fmt.Errorf("scrape events for hosts: %w", err)
 	}
