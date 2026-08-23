@@ -68,3 +68,12 @@ linters:
     tagalign:
       sort: true
       strict: true
+
+  exclusions:
+    rules:
+      # A table driven test is long because of its table, not because of its
+      # logic. Splitting one up to satisfy a line count would only make it
+      # harder to read.
+      - path: _test\.go
+        linters:
+          - funlen

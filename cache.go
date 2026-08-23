@@ -7,9 +7,15 @@ import (
 	"log"
 	"maps"
 	"os"
+	"time"
 
 	fbevents "github.com/grucha/facebook-events-scraper"
 )
+
+// eventRetention keeps events in the cache for a while after they ended, so
+// that a scrape running in the evening does not empty out the current day and
+// the calendar still shows what was on earlier.
+const eventRetention = 48 * time.Hour
 
 func eventsMapToSlice(eventsMap map[string]*fbevents.EventData) []*fbevents.EventData {
 	eventsSlice := make([]*fbevents.EventData, 0, len(eventsMap))
@@ -86,4 +92,39 @@ func mergeEvents(cachedEvents, scrapedEvents map[string]*fbevents.EventData) map
 
 	log.Printf("Merged %d scraped events into %d cached events, %d in total", len(scrapedEvents), len(cachedEvents), len(mergedEvents))
 	return mergedEvents
+}
+
+// getEventEndTime returns the time the event is over. Facebook does not always
+// give an end time, roughly half of the scraped events only have a start one,
+// so the start time is used as the fallback.
+func getEventEndTime(event *fbevents.EventData) time.Time {
+	endTimestamp := event.StartTimestamp
+	if event.EndTimestamp != nil {
+		// In the rare case where the endTimestamp would be earlier than
+		// the startTime (No such event has come back from Facebook so far),
+		// take whichever timestamp is later.
+		endTimestamp = max(endTimestamp, *event.EndTimestamp)
+	}
+
+	return time.Unix(endTimestamp, 0)
+}
+
+// pruneOutdatedEvents drops the events that ended before the retention cutoff.
+//
+// Without this a past event would stay in the cache forever.
+// The current time is a parameter to keep this testable.
+func pruneOutdatedEvents(events map[string]*fbevents.EventData, now time.Time) map[string]*fbevents.EventData {
+	cutoff := now.Add(-eventRetention)
+
+	keptEvents := make(map[string]*fbevents.EventData, len(events))
+	for eventID, event := range events {
+		// A multi day event that is still running has to be kept, so the end
+		// time decides, not the start one
+		if getEventEndTime(event).After(cutoff) {
+			keptEvents[eventID] = event
+		}
+	}
+
+	log.Printf("Pruned %d outdated events, %d are kept", len(events)-len(keptEvents), len(keptEvents))
+	return keptEvents
 }

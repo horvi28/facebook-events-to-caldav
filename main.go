@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/alexflint/go-arg"
 	fbevents "github.com/grucha/facebook-events-scraper"
@@ -75,6 +76,9 @@ func loadEvents(hostConfig *HostConfig, fromCache bool, cacheFilePath string) (m
 	if err != nil {
 		return nil, fmt.Errorf("load cached events: %w", err)
 	}
+
+	// Drop the events that are over, otherwise the cache would only grow
+	cachedEvents = pruneOutdatedEvents(cachedEvents, time.Now())
 
 	scrapedEvents, err := scrapeEventsForHosts(hostConfig)
 	if err != nil {
