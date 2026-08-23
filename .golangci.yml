@@ -59,6 +59,11 @@ linters:
   settings:
     cyclop:
       max-complexity: 12
+    goconst:
+      # Repeated literals in tests are fixtures and assertions stating the same
+      # value independently. Extracting them does not make any sense, so tests
+      # are left out of the analysis.
+      ignore-tests: true
     tagalign:
       sort: true
       strict: true
