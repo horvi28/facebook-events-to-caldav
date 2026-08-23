@@ -39,13 +39,9 @@ func shouldScrapeEventDetails(shortEvent fbevents.ShortEventData, cachedEvents m
 // one request per event, so skipping the known ones is what keeps the number of
 // requests low.
 func scrapeEventsForHost(hostURL string, cachedEvents map[string]*fbevents.EventData, randomGenerator *rand.Rand) ([]*fbevents.EventData, error) {
-	options := &fbevents.Options{
-		IncludePastEvents: false,
-	}
-
 	// Only list the upcoming events, past ones are not interested
 	upcoming := fbevents.EventTypeUpcoming
-	shortEvents, err := fbevents.ScrapeFbEventList(hostURL, &upcoming, options)
+	shortEvents, err := fbevents.ScrapeFbEventList(hostURL, &upcoming, nil)
 	if err != nil {
 		return nil, fmt.Errorf("scrape Facebook event list for host %s: %w", hostURL, err)
 	}
@@ -62,7 +58,7 @@ func scrapeEventsForHost(hostURL string, cachedEvents map[string]*fbevents.Event
 		// Sleep 5-20s between every event detail scrape
 		sleepRandom(randomGenerator, 5*time.Second, 20*time.Second)
 
-		event, err := fbevents.ScrapeFbEvent(shortEvent.URL, options)
+		event, err := fbevents.ScrapeFbEvent(shortEvent.URL, nil)
 		if err != nil {
 			return nil, fmt.Errorf("scrape Facebook event %s (%s) for host %s: %w", shortEvent.ID, shortEvent.Name, hostURL, err)
 		}
