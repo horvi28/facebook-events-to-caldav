@@ -15,15 +15,41 @@ func sleepRandom(r *rand.Rand, minimumDuration, maximumDuration time.Duration) {
 	time.Sleep(duration)
 }
 
-func scrapeEventsForHost(hostURL string) ([]*fbevents.EventData, error) {
-	// Scrape full event details but only for upcoming events
+// scrapeEventsForHost fetches the host's event list and then the full details of
+// each listed event.
+//
+// This is what fbevents.ScrapeFbEventListFull does internally, but driving the
+// loop here lets us sleep between the event detail requests.
+func scrapeEventsForHost(hostURL string, randomGenerator *rand.Rand) ([]*fbevents.EventData, error) {
 	options := &fbevents.Options{
 		IncludePastEvents: false,
 	}
-	events, err := fbevents.ScrapeFbEventListFull(hostURL, options)
+
+	// Only list the upcoming events, past ones are not interested
+	upcoming := fbevents.EventTypeUpcoming
+	shortEvents, err := fbevents.ScrapeFbEventList(hostURL, &upcoming, options)
 	if err != nil {
-		return nil, fmt.Errorf("scrape Facebook events for host %s: %w", hostURL, err)
+		return nil, fmt.Errorf("scrape Facebook event list for host %s: %w", hostURL, err)
 	}
+	log.Printf("Listed %d events for %s", len(shortEvents), hostURL)
+
+	events := make([]*fbevents.EventData, 0, len(shortEvents))
+	for _, shortEvent := range shortEvents {
+		// Skip detailes for cancelled events
+		if shortEvent.IsCanceled {
+			continue
+		}
+
+		// Sleep 5-20s between every event detail scrape
+		sleepRandom(randomGenerator, 5*time.Second, 20*time.Second)
+
+		event, err := fbevents.ScrapeFbEvent(shortEvent.URL, options)
+		if err != nil {
+			return nil, fmt.Errorf("scrape Facebook event %s (%s) for host %s: %w", shortEvent.ID, shortEvent.Name, hostURL, err)
+		}
+		events = append(events, event)
+	}
+
 	log.Printf("Scraped %d events for %s", len(events), hostURL)
 	return events, nil
 }
@@ -42,7 +68,7 @@ func scrapeEventsForHosts(config *HostConfig) (map[string]*fbevents.EventData, e
 	for index, hostURL := range hostUrls {
 		eventNumber := index + 1
 		log.Printf("[%d/%d] Scraping events for %s", eventNumber, len(hostUrls), hostURL)
-		events, err := scrapeEventsForHost(hostURL)
+		events, err := scrapeEventsForHost(hostURL, randomGenerator)
 		if err != nil {
 			log.Printf("Skipping host after scrape failure: %s: %v", hostURL, err)
 			scrapeErrors = append(scrapeErrors, err)
