@@ -5,6 +5,10 @@
 #   calendar. Omit it to use the default. It is fixed as Red (#FF0000) currently.
 # - `hosts` lists the profile URLs under that category. Facebook rarely tags
 #   events with a category, so the one you assign here drives the color.
+# - Categories are read from top to bottom. If the same profile is listed under
+#   more than one category, the first one wins: it decides the category and the
+#   color of that profile, and the later ones are ignored. The profile is also
+#   only scraped once. Move a category higher up in the file to give it priority.
 
 # It supports two type of profile URLs
 # - The simple one: https://www.facebook.com/ironmaiden
