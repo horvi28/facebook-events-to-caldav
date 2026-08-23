@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"maps"
 	"os"
 
 	fbevents "github.com/grucha/facebook-events-scraper"
@@ -56,4 +58,32 @@ func loadEventsFromJSONFile(eventsJSONPath string) (map[string]*fbevents.EventDa
 
 	log.Printf("Loaded %d events from JSON file: %s", len(events), eventsJSONPath)
 	return eventsSliceToMap(events), nil
+}
+
+// loadCachedEvents loads the cache file like loadEventsFromJSONFile, but treats a
+// missing file as an empty cache instead of an error. That is the expected state
+// on a first run, while --from-cache should still fail on a missing file.
+func loadCachedEvents(eventsJSONPath string) (map[string]*fbevents.EventData, error) {
+	events, err := loadEventsFromJSONFile(eventsJSONPath)
+	if errors.Is(err, os.ErrNotExist) {
+		log.Printf("No cache file at %s yet, starting with an empty cache", eventsJSONPath)
+		return map[string]*fbevents.EventData{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	return events, nil
+}
+
+// mergeEvents returns the union of the cached and the freshly scraped events.
+// Scraped events win on conflict, as they are the newer data.
+func mergeEvents(cachedEvents, scrapedEvents map[string]*fbevents.EventData) map[string]*fbevents.EventData {
+	mergedEvents := make(map[string]*fbevents.EventData, len(cachedEvents)+len(scrapedEvents))
+	maps.Copy(mergedEvents, cachedEvents)
+	// This will overwrite the existing ones
+	maps.Copy(mergedEvents, scrapedEvents)
+
+	log.Printf("Merged %d scraped events into %d cached events, %d in total", len(scrapedEvents), len(cachedEvents), len(mergedEvents))
+	return mergedEvents
 }

@@ -70,10 +70,19 @@ func loadEvents(hostConfig *HostConfig, fromCache bool, cacheFilePath string) (m
 		return allEvents, nil
 	}
 
-	allEvents, err := scrapeEventsForHosts(hostConfig)
+	// Keep those events of the hosts that are not scraped this time, but already in the cache
+	cachedEvents, err := loadCachedEvents(cacheFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("load cached events: %w", err)
+	}
+
+	scrapedEvents, err := scrapeEventsForHosts(hostConfig)
 	if err != nil {
 		return nil, fmt.Errorf("scrape events for hosts: %w", err)
 	}
+
+	// Merge the events in the cache and the newly scraped ones
+	allEvents := mergeEvents(cachedEvents, scrapedEvents)
 
 	if err := dumpEventsToJSONFile(allEvents, cacheFilePath); err != nil {
 		return nil, fmt.Errorf("dump events to JSON file: %w", err)
