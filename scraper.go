@@ -30,6 +30,21 @@ func shouldScrapeEventDetails(shortEvent fbevents.ShortEventData, cachedEvents m
 	return !isAlreadyInCache
 }
 
+// listUpcomingEventsForHost lists the upcoming events, past ones are not of interest
+func listUpcomingEventsForHost(hostURL string) ([]fbevents.ShortEventData, error) {
+	// The library options only carry a custom transport and a request timeout,
+	// neither of which is needed. A transport would go here to rotate the user
+	// agent or route through a proxy.
+	upcoming := fbevents.EventTypeUpcoming
+	shortEvents, err := fbevents.ScrapeFbEventList(hostURL, &upcoming, nil)
+	if err != nil {
+		return nil, fmt.Errorf("scrape Facebook event list for host %s: %w", hostURL, err)
+	}
+	log.Printf("Listed %d events for %s", len(shortEvents), hostURL)
+
+	return shortEvents, nil
+}
+
 // scrapeEventsForHost fetches the host's event list and then the full details of
 // each listed event that is not in the cache yet.
 //
@@ -39,13 +54,10 @@ func shouldScrapeEventDetails(shortEvent fbevents.ShortEventData, cachedEvents m
 // one request per event, so skipping the known ones is what keeps the number of
 // requests low.
 func scrapeEventsForHost(hostURL string, cachedEvents map[string]*fbevents.EventData, randomGenerator *rand.Rand) ([]*fbevents.EventData, error) {
-	// Only list the upcoming events, past ones are not interested
-	upcoming := fbevents.EventTypeUpcoming
-	shortEvents, err := fbevents.ScrapeFbEventList(hostURL, &upcoming, nil)
+	shortEvents, err := listUpcomingEventsForHost(hostURL)
 	if err != nil {
-		return nil, fmt.Errorf("scrape Facebook event list for host %s: %w", hostURL, err)
+		return nil, err
 	}
-	log.Printf("Listed %d events for %s", len(shortEvents), hostURL)
 
 	events := make([]*fbevents.EventData, 0, len(shortEvents))
 	skippedCount := 0
