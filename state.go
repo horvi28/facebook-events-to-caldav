@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"time"
 )
 
@@ -54,4 +55,22 @@ func saveScrapeState(state scrapeState, statePath string) error {
 	}
 
 	return nil
+}
+
+// selectHostsToScrape picks the hosts that have been waiting the longest.
+//
+// Scraping every host in one run is what makes the traffic look like a crawl,
+// so a run only takes the most overdue ones and the rest follow on the next
+// runs. A host that is missing from the state has never been scraped and comes
+// first, and hosts that are equally overdue keep the order of the hosts file.
+func selectHostsToScrape(hosts []string, state scrapeState, hostsPerRun int) []string {
+	// Sorted on a copy, as the caller keeps using its own order
+	overdueFirst := slices.Clone(hosts)
+	slices.SortStableFunc(overdueFirst, func(firstHost, secondHost string) int {
+		// A host that is not in the state gets the zero time, which sorts first
+		return state[firstHost].Compare(state[secondHost])
+	})
+
+	// Slice it to the number of hostsPerRun or if the list is smaller then the whole list
+	return overdueFirst[:min(hostsPerRun, len(overdueFirst))]
 }

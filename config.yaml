@@ -31,5 +31,5 @@ scrape:
 
   # How many hosts a single run scrapes. The most overdue ones are picked, the
   # rest follow on the next runs, so all of them are covered eventually. Set it
-  # to the number of hosts to scrape everything in one go, as it used to be.
+  # to the number of hosts or a raelly big number to scrape everything in one go.
   hosts_per_run: 20
