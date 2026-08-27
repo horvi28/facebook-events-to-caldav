@@ -81,14 +81,15 @@ func scrapeEventsForHost(hostURL string, cachedEvents map[string]*fbevents.Event
 	return events, nil
 }
 
-// scrapeEventsForHosts scrapes every host in the config. The cached events are
-// only read, to tell which event details can be skipped.
+// scrapeEventsForHosts scrapes the most overdue hosts of the config, not all of
+// them. The cached events are only read, to tell which event details can be
+// skipped.
 //
 // Every host that was scraped successfully gets its time recorded and saved into
 // the state, so a later run can tell how long each one has been waiting.
 func scrapeEventsForHosts(config *HostConfig, cachedEvents map[string]*fbevents.EventData, scrapeConfig ScrapeConfig, state scrapeState) (map[string]*fbevents.EventData, error) {
-	hostUrls := config.Hosts
-	log.Printf("Start scraping events for %d hosts", len(hostUrls))
+	hostUrls := selectHostsToScrape(config.Hosts, state, scrapeConfig.HostsPerRun)
+	log.Printf("Start scraping events for the most overdue hosts: %d of the %d hosts", len(hostUrls), len(config.Hosts))
 
 	// Use a map to automatically deduplicate by event ID
 	eventsMap := make(map[string]*fbevents.EventData)
