@@ -11,3 +11,20 @@ scrape:
   # Wait between fetching the details of two events of the same host
   pause_between_events_min: 5s
   pause_between_events_max: 20s
+
+  # Wait between two hosts
+  pause_between_hosts_min: 10s
+  pause_between_hosts_max: 30s
+
+  # A longer break after every so many hosts, to break up the run
+  long_pause_after_hosts: 10
+  long_pause_min: 10m
+  long_pause_max: 20m
+
+  # Wait after a host failed, before moving on to the next one. Long, as a
+  # failure is the point where Facebook is most likely to have noticed something
+  pause_after_failure_min: 1h
+  pause_after_failure_max: 2h
+
+  # Give up the whole run once more than this many hosts have failed
+  max_failed_hosts: 5

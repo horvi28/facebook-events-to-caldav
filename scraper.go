@@ -93,7 +93,6 @@ func scrapeEventsForHosts(config *HostConfig, cachedEvents map[string]*fbevents.
 	// Random generator to sleep between scrapes of different hosts to avoid hitting Facebook too hard
 	randomGenerator := rand.New(rand.NewSource(time.Now().UnixNano()))
 	var scrapeErrors []error
-	const maxFailedHostCount = 5
 	for index, hostURL := range hostUrls {
 		eventNumber := index + 1
 		log.Printf("[%d/%d] Scraping events for %s", eventNumber, len(hostUrls), hostURL)
@@ -101,11 +100,11 @@ func scrapeEventsForHosts(config *HostConfig, cachedEvents map[string]*fbevents.
 		if err != nil {
 			log.Printf("Skipping host after scrape failure: %s: %v", hostURL, err)
 			scrapeErrors = append(scrapeErrors, err)
-			if len(scrapeErrors) > maxFailedHostCount {
+			if len(scrapeErrors) > scrapeConfig.MaxFailedHosts {
 				return eventsMap, fmt.Errorf("stop scraping after %d failed hosts: %w", len(scrapeErrors), errors.Join(scrapeErrors...))
 			}
-			// If a host fails, sleep for 1-2 hours before continuing, just to be safe and avoid hitting Facebook too hard
-			sleepRandom(randomGenerator, 1*time.Hour, 2*time.Hour)
+			// If a host fails, sleep a long time before continuing, just to be safe and avoid hitting Facebook too hard
+			sleepRandom(randomGenerator, scrapeConfig.PauseAfterFailureMin, scrapeConfig.PauseAfterFailureMax)
 			continue // Skip this host and continue with next
 		}
 
@@ -126,13 +125,13 @@ func scrapeEventsForHosts(config *HostConfig, cachedEvents map[string]*fbevents.
 		}
 		log.Printf("Added %d events from %s (total unique: %d)", len(events), hostURL, len(eventsMap))
 
-		// Big pause after every 10 profiles, 10-20 min
-		if eventNumber%10 == 0 {
-			log.Printf("[%d/%d] Scraping events, sleeping for 10-20 minutes", eventNumber, len(hostUrls))
-			sleepRandom(randomGenerator, 10*time.Minute, 20*time.Minute)
+		// Big pause after every so many profiles
+		if eventNumber%scrapeConfig.LongPauseAfterHosts == 0 {
+			log.Printf("[%d/%d] Scraping events, sleeping for %v-%v", eventNumber, len(hostUrls), scrapeConfig.LongPauseMin, scrapeConfig.LongPauseMax)
+			sleepRandom(randomGenerator, scrapeConfig.LongPauseMin, scrapeConfig.LongPauseMax)
 		} else {
-			// Small sleep between every profile: 10-30s
-			sleepRandom(randomGenerator, 10*time.Second, 30*time.Second)
+			// Small sleep between every profile
+			sleepRandom(randomGenerator, scrapeConfig.PauseBetweenHostsMin, scrapeConfig.PauseBetweenHostsMax)
 		}
 	}
 	log.Printf("Finished scraping, found %d unique events", len(eventsMap))

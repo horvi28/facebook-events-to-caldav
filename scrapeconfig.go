@@ -13,6 +13,14 @@ import (
 type ScrapeConfig struct {
 	PauseBetweenEventsMin time.Duration `yaml:"pause_between_events_min"`
 	PauseBetweenEventsMax time.Duration `yaml:"pause_between_events_max"`
+	PauseBetweenHostsMin  time.Duration `yaml:"pause_between_hosts_min"`
+	PauseBetweenHostsMax  time.Duration `yaml:"pause_between_hosts_max"`
+	LongPauseAfterHosts   int           `yaml:"long_pause_after_hosts"`
+	LongPauseMin          time.Duration `yaml:"long_pause_min"`
+	LongPauseMax          time.Duration `yaml:"long_pause_max"`
+	PauseAfterFailureMin  time.Duration `yaml:"pause_after_failure_min"`
+	PauseAfterFailureMax  time.Duration `yaml:"pause_after_failure_max"`
+	MaxFailedHosts        int           `yaml:"max_failed_hosts"`
 }
 
 // configFile is the top level of the config file. The pacing values live under
@@ -35,13 +43,41 @@ func validateRange(minimumKey string, minimumValue time.Duration, maximumKey str
 	return nil
 }
 
-// validateScrapeConfig rejects a config that would make the scraper panic or
-// that is missing a key.
+// validateCount checks one of the plain numbers of the config file. A missing
+// key parses as a zero, so requiring at least one catches that as well.
+func validateCount(key string, value int) error {
+	if value < 1 {
+		return fmt.Errorf("%s must be at least 1, got %d", key, value)
+	}
+
+	return nil
+}
+
+// validateScrapeConfig rejects a config that would make the scraper panic
 func validateScrapeConfig(config ScrapeConfig) error {
-	return validateRange(
-		"pause_between_events_min", config.PauseBetweenEventsMin,
-		"pause_between_events_max", config.PauseBetweenEventsMax,
-	)
+	ranges := []struct {
+		minimumKey   string
+		minimumValue time.Duration
+		maximumKey   string
+		maximumValue time.Duration
+	}{
+		{"pause_between_events_min", config.PauseBetweenEventsMin, "pause_between_events_max", config.PauseBetweenEventsMax},
+		{"pause_between_hosts_min", config.PauseBetweenHostsMin, "pause_between_hosts_max", config.PauseBetweenHostsMax},
+		{"long_pause_min", config.LongPauseMin, "long_pause_max", config.LongPauseMax},
+		{"pause_after_failure_min", config.PauseAfterFailureMin, "pause_after_failure_max", config.PauseAfterFailureMax},
+	}
+	for _, valueRange := range ranges {
+		if err := validateRange(valueRange.minimumKey, valueRange.minimumValue, valueRange.maximumKey, valueRange.maximumValue); err != nil {
+			return err
+		}
+	}
+
+	// A zero would panic as the number of hosts is taken modulo this one
+	if err := validateCount("long_pause_after_hosts", config.LongPauseAfterHosts); err != nil {
+		return err
+	}
+
+	return validateCount("max_failed_hosts", config.MaxFailedHosts)
 }
 
 // loadScrapeConfig reads the pacing values from the config file. The file is

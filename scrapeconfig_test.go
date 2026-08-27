@@ -8,6 +8,23 @@ import (
 	"time"
 )
 
+// validScrapeConfig is a config with every key set, for the cases that are only
+// interested in one of them.
+func validScrapeConfig() ScrapeConfig {
+	return ScrapeConfig{
+		PauseBetweenEventsMin: 5 * time.Second,
+		PauseBetweenEventsMax: 20 * time.Second,
+		PauseBetweenHostsMin:  10 * time.Second,
+		PauseBetweenHostsMax:  30 * time.Second,
+		LongPauseAfterHosts:   10,
+		LongPauseMin:          10 * time.Minute,
+		LongPauseMax:          20 * time.Minute,
+		PauseAfterFailureMin:  1 * time.Hour,
+		PauseAfterFailureMax:  2 * time.Hour,
+		MaxFailedHosts:        5,
+	}
+}
+
 // writeConfigFile writes the given YAML into a temporary config file and
 // returns its path.
 func writeConfigFile(t *testing.T, content string) string {
@@ -22,22 +39,48 @@ func writeConfigFile(t *testing.T, content string) string {
 }
 
 func TestLoadScrapeConfig(t *testing.T) {
-	// A config with two different units, to show that any unit is understood
+	// Every value differs from the shipped config.yaml, and the units are mixed
+	// on purpose, to show that any of them is understood
 	const validConfig = `
 scrape:
   pause_between_events_min: 3s
   pause_between_events_max: 7m
+  pause_between_hosts_min: 1500ms
+  pause_between_hosts_max: 2s
+  long_pause_after_hosts: 4
+  long_pause_min: 1m
+  long_pause_max: 1h30m
+  pause_after_failure_min: 2h
+  pause_after_failure_max: 3h
+  max_failed_hosts: 2
 `
 	config, err := loadScrapeConfig(writeConfigFile(t, validConfig))
 	if err != nil {
 		t.Fatalf("loadScrapeConfig: %v", err)
 	}
 
-	if config.PauseBetweenEventsMin != 3*time.Second {
-		t.Errorf("PauseBetweenEventsMin = %v, want 3s", config.PauseBetweenEventsMin)
+	want := ScrapeConfig{
+		PauseBetweenEventsMin: 3 * time.Second,
+		PauseBetweenEventsMax: 7 * time.Minute,
+		PauseBetweenHostsMin:  1500 * time.Millisecond,
+		PauseBetweenHostsMax:  2 * time.Second,
+		LongPauseAfterHosts:   4,
+		LongPauseMin:          1 * time.Minute,
+		LongPauseMax:          90 * time.Minute,
+		PauseAfterFailureMin:  2 * time.Hour,
+		PauseAfterFailureMax:  3 * time.Hour,
+		MaxFailedHosts:        2,
 	}
-	if config.PauseBetweenEventsMax != 7*time.Minute {
-		t.Errorf("PauseBetweenEventsMax = %v, want 7m", config.PauseBetweenEventsMax)
+	if config != want {
+		t.Errorf("loadScrapeConfig = %+v, want %+v", config, want)
+	}
+}
+
+// TestLoadScrapeConfigFromRepositoryFile checks that the config file shipped
+// with the project is a valid one, as nothing else would notice a typo in it.
+func TestLoadScrapeConfigFromRepositoryFile(t *testing.T) {
+	if _, err := loadScrapeConfig("config.yaml"); err != nil {
+		t.Fatalf("the config.yaml of the repository is not valid: %v", err)
 	}
 }
 
@@ -95,51 +138,86 @@ func TestLoadScrapeConfigRejectsUnparsableDurations(t *testing.T) {
 }
 
 // TestValidateScrapeConfig covers the values that parse fine but would panic in
-// sleepRandom, as rand.Int63n panics unless the range is positive. A key that is
-// missing from the file parses as a zero duration, so it lands here as well.
+// sleepRandom, as rand.Int63n panics unless the range is positive, or in the
+// modulo of the long pause. A key that is missing from the file parses as a
+// zero, so it lands here as well.
+//
+// Every case starts from a valid config and breaks a single value, so that a
+// range that is never checked shows up as a failure.
 func TestValidateScrapeConfig(t *testing.T) {
 	testCases := []struct {
-		name   string
-		config ScrapeConfig
-		valid  bool
+		name        string
+		breakConfig func(*ScrapeConfig)
+		valid       bool
 	}{
 		{
-			name:   "a valid config",
-			config: ScrapeConfig{PauseBetweenEventsMin: 5 * time.Second, PauseBetweenEventsMax: 20 * time.Second},
-			valid:  true,
+			name:  "a valid config",
+			valid: true,
+		},
+		// For the invalid test cases, breakConfig will change a value in the validScrapeConfig() to make it invalid and test it
+		{
+			name:        "the pause between events is inverted",
+			breakConfig: func(config *ScrapeConfig) { config.PauseBetweenEventsMax = config.PauseBetweenEventsMin - time.Second },
+			valid:       false,
 		},
 		{
-			name:   "a maximum below its minimum",
-			config: ScrapeConfig{PauseBetweenEventsMin: 20 * time.Second, PauseBetweenEventsMax: 5 * time.Second},
-			valid:  false,
+			name:        "the pause between hosts is inverted",
+			breakConfig: func(config *ScrapeConfig) { config.PauseBetweenHostsMax = config.PauseBetweenHostsMin - time.Second },
+			valid:       false,
 		},
 		{
-			name:   "a maximum equal to its minimum",
-			config: ScrapeConfig{PauseBetweenEventsMin: 5 * time.Second, PauseBetweenEventsMax: 5 * time.Second},
-			valid:  false,
+			name:        "the long pause is inverted",
+			breakConfig: func(config *ScrapeConfig) { config.LongPauseMax = config.LongPauseMin - time.Second },
+			valid:       false,
 		},
 		{
-			name:   "a missing minimum",
-			config: ScrapeConfig{PauseBetweenEventsMax: 20 * time.Second},
-			valid:  false,
+			name:        "the pause after a failure is inverted",
+			breakConfig: func(config *ScrapeConfig) { config.PauseAfterFailureMax = config.PauseAfterFailureMin - time.Second },
+			valid:       false,
 		},
 		{
-			name:   "a missing maximum",
-			config: ScrapeConfig{PauseBetweenEventsMin: 5 * time.Second},
-			valid:  false,
+			name:        "a maximum equal to its minimum",
+			breakConfig: func(config *ScrapeConfig) { config.PauseBetweenEventsMax = config.PauseBetweenEventsMin },
+			valid:       false,
 		},
 		{
-			name:   "a negative minimum",
-			config: ScrapeConfig{PauseBetweenEventsMin: -5 * time.Second, PauseBetweenEventsMax: 20 * time.Second},
-			valid:  false,
+			name:        "a missing minimum",
+			breakConfig: func(config *ScrapeConfig) { config.PauseBetweenEventsMin = 0 },
+			valid:       false,
+		},
+		{
+			name:        "a missing maximum",
+			breakConfig: func(config *ScrapeConfig) { config.PauseBetweenEventsMax = 0 },
+			valid:       false,
+		},
+		{
+			name:        "a negative minimum",
+			breakConfig: func(config *ScrapeConfig) { config.PauseBetweenEventsMin = -5 * time.Second },
+			valid:       false,
+		},
+		{
+			name:        "a missing long pause interval",
+			breakConfig: func(config *ScrapeConfig) { config.LongPauseAfterHosts = 0 },
+			valid:       false,
+		},
+		{
+			name:        "a missing maximum of failed hosts",
+			breakConfig: func(config *ScrapeConfig) { config.MaxFailedHosts = 0 },
+			valid:       false,
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := validateScrapeConfig(testCase.config)
+			// Get a valid config and modify some of the values with breakConfig
+			config := validScrapeConfig()
+			if testCase.breakConfig != nil {
+				testCase.breakConfig(&config)
+			}
 
-			// The valid cases
+			err := validateScrapeConfig(config)
+
+			// The valid case
 			if testCase.valid {
 				if err != nil {
 					t.Fatalf("validateScrapeConfig: %v", err)
