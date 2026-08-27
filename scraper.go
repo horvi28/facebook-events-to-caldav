@@ -53,7 +53,7 @@ func listUpcomingEventsForHost(hostURL string) ([]fbevents.ShortEventData, error
 // we already know. Listing a host costs a single request while its details cost
 // one request per event, so skipping the known ones is what keeps the number of
 // requests low.
-func scrapeEventsForHost(hostURL string, cachedEvents map[string]*fbevents.EventData, randomGenerator *rand.Rand) ([]*fbevents.EventData, error) {
+func scrapeEventsForHost(hostURL string, cachedEvents map[string]*fbevents.EventData, randomGenerator *rand.Rand, scrapeConfig ScrapeConfig) ([]*fbevents.EventData, error) {
 	shortEvents, err := listUpcomingEventsForHost(hostURL)
 	if err != nil {
 		return nil, err
@@ -67,8 +67,8 @@ func scrapeEventsForHost(hostURL string, cachedEvents map[string]*fbevents.Event
 			continue
 		}
 
-		// Sleep 5-20s between every event detail scrape
-		sleepRandom(randomGenerator, 5*time.Second, 20*time.Second)
+		// Sleep between every event detail scrape
+		sleepRandom(randomGenerator, scrapeConfig.PauseBetweenEventsMin, scrapeConfig.PauseBetweenEventsMax)
 
 		event, err := fbevents.ScrapeFbEvent(shortEvent.URL, nil)
 		if err != nil {
@@ -83,7 +83,7 @@ func scrapeEventsForHost(hostURL string, cachedEvents map[string]*fbevents.Event
 
 // scrapeEventsForHosts scrapes every host in the config. The cached events are
 // only read, to tell which event details can be skipped.
-func scrapeEventsForHosts(config *HostConfig, cachedEvents map[string]*fbevents.EventData) (map[string]*fbevents.EventData, error) {
+func scrapeEventsForHosts(config *HostConfig, cachedEvents map[string]*fbevents.EventData, scrapeConfig ScrapeConfig) (map[string]*fbevents.EventData, error) {
 	hostUrls := config.Hosts
 	log.Printf("Start scraping events for %d hosts", len(hostUrls))
 
@@ -97,7 +97,7 @@ func scrapeEventsForHosts(config *HostConfig, cachedEvents map[string]*fbevents.
 	for index, hostURL := range hostUrls {
 		eventNumber := index + 1
 		log.Printf("[%d/%d] Scraping events for %s", eventNumber, len(hostUrls), hostURL)
-		events, err := scrapeEventsForHost(hostURL, cachedEvents, randomGenerator)
+		events, err := scrapeEventsForHost(hostURL, cachedEvents, randomGenerator, scrapeConfig)
 		if err != nil {
 			log.Printf("Skipping host after scrape failure: %s: %v", hostURL, err)
 			scrapeErrors = append(scrapeErrors, err)

@@ -1,0 +1,13 @@
+# Pacing of the scraper. Every value is required, there are no defaults in the
+# code, so the scraper refuses to start if a key is missing.
+#
+# The waits are bounds of a random pause, so a real wait is picked somewhere
+# between the minimum and the maximum. The maximum has to be greater than the
+# minimum. Durations are written with their unit: 5s, 10m, 1h.
+#
+# Lowering these makes a run finish sooner at the price of looking more like a
+# bot to Facebook.
+scrape:
+  # Wait between fetching the details of two events of the same host
+  pause_between_events_min: 5s
+  pause_between_events_max: 20s

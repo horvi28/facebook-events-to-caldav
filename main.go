@@ -15,6 +15,7 @@ const defaultCalendarFilePath = "events.ics"
 
 type Args struct {
 	HostsFile     string `arg:"--hosts"          default:"hosts.yaml"  help:"Path to the YAML file that contains Facebook host URLs, for which events should be scraped (mapped to categories with colors)"`
+	ConfigFile    string `arg:"--config"         default:"config.yaml" help:"Path to the YAML file that contains the scraping configuration"`
 	FromCache     bool   `arg:"--from-cache"                           help:"Load events from the cache file instead of scraping"`
 	CacheFile     string `arg:"--cache-file"     default:"events.json" help:"Path to the cache file"`
 	WriteCalendar bool   `arg:"--write-calendar"                       help:"Write events into a local calendar file"`
@@ -36,7 +37,12 @@ func run() error {
 		return err
 	}
 
-	allEvents, err := loadEvents(hostConfig, args.FromCache, args.CacheFile)
+	scrapeConfig, err := loadScrapeConfig(args.ConfigFile)
+	if err != nil {
+		return err
+	}
+
+	allEvents, err := loadEvents(hostConfig, scrapeConfig, args.FromCache, args.CacheFile)
 	if err != nil {
 		return err
 	}
@@ -62,7 +68,7 @@ func run() error {
 	return nil
 }
 
-func loadEvents(hostConfig *HostConfig, fromCache bool, cacheFilePath string) (map[string]*fbevents.EventData, error) {
+func loadEvents(hostConfig *HostConfig, scrapeConfig ScrapeConfig, fromCache bool, cacheFilePath string) (map[string]*fbevents.EventData, error) {
 	if fromCache {
 		allEvents, err := loadEventsFromJSONFile(cacheFilePath)
 		if err != nil {
@@ -80,7 +86,7 @@ func loadEvents(hostConfig *HostConfig, fromCache bool, cacheFilePath string) (m
 	// Drop the events that are over, otherwise the cache would only grow
 	cachedEvents = pruneOutdatedEvents(cachedEvents, time.Now())
 
-	scrapedEvents, err := scrapeEventsForHosts(hostConfig, cachedEvents)
+	scrapedEvents, err := scrapeEventsForHosts(hostConfig, cachedEvents, scrapeConfig)
 	if err != nil {
 		return nil, fmt.Errorf("scrape events for hosts: %w", err)
 	}

@@ -68,6 +68,12 @@ linters:
     tagalign:
       sort: true
       strict: true
+    tagliatelle:
+      # snake_case is the usual style for YAML keys, and the config files are
+      # written by hand, so they should read naturally
+      case:
+        rules:
+          yaml: snake
 
   exclusions:
     rules:
