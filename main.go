@@ -43,7 +43,7 @@ func run() error {
 		return err
 	}
 
-	allEvents, err := loadEvents(hostConfig, scrapeConfig, args.FromCache, args.CacheFile, args.StateFile)
+	allEvents, scrapedEventsCount, err := loadEvents(hostConfig, scrapeConfig, args.FromCache, args.CacheFile, args.StateFile)
 	if err != nil {
 		return err
 	}
@@ -65,23 +65,25 @@ func run() error {
 		}
 	}
 
-	logSummary(len(allEvents), args)
+	logSummary(len(allEvents), scrapedEventsCount, args)
 	return nil
 }
 
-func loadEvents(hostConfig *HostConfig, scrapeConfig ScrapeConfig, fromCache bool, cacheFilePath, stateFilePath string) (map[string]*fbevents.EventData, error) {
+// loadEvents returns every event scraped or loaded from the cache and how many
+// of them were scraped by this run.
+func loadEvents(hostConfig *HostConfig, scrapeConfig ScrapeConfig, fromCache bool, cacheFilePath, stateFilePath string) (map[string]*fbevents.EventData, int, error) {
 	if fromCache {
 		allEvents, err := loadEventsFromJSONFile(cacheFilePath)
 		if err != nil {
-			return nil, fmt.Errorf("load events from JSON file: %w", err)
+			return nil, 0, fmt.Errorf("load events from JSON file: %w", err)
 		}
-		return allEvents, nil
+		return allEvents, 0, nil
 	}
 
 	// Keep those events of the hosts that are not scraped this time, but already in the cache
 	cachedEvents, err := loadCachedEvents(cacheFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("load cached events: %w", err)
+		return nil, 0, fmt.Errorf("load cached events: %w", err)
 	}
 
 	// Drop the events that are over, otherwise the cache would only grow
@@ -90,26 +92,26 @@ func loadEvents(hostConfig *HostConfig, scrapeConfig ScrapeConfig, fromCache boo
 	// Remembers when each host was scraped the last time
 	state, err := loadScrapeState(stateFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("load scrape state: %w", err)
+		return nil, 0, fmt.Errorf("load scrape state: %w", err)
 	}
 
 	scrapedEvents, err := scrapeEventsForHosts(hostConfig, cachedEvents, scrapeConfig, state)
 	if err != nil {
-		return nil, fmt.Errorf("scrape events for hosts: %w", err)
+		return nil, 0, fmt.Errorf("scrape events for hosts: %w", err)
 	}
 
 	if err := saveScrapeState(state, stateFilePath); err != nil {
-		return nil, fmt.Errorf("save scrape state: %w", err)
+		return nil, 0, fmt.Errorf("save scrape state: %w", err)
 	}
 
 	// Merge the events in the cache and the newly scraped ones
 	allEvents := mergeEvents(cachedEvents, scrapedEvents)
 
 	if err := dumpEventsToJSONFile(allEvents, cacheFilePath); err != nil {
-		return nil, fmt.Errorf("dump events to JSON file: %w", err)
+		return nil, 0, fmt.Errorf("dump events to JSON file: %w", err)
 	}
 
-	return allEvents, nil
+	return allEvents, len(scrapedEvents), nil
 }
 
 func writeEventsCalendar(events map[string]*fbevents.EventData, eventsCalendarPath string, colorByCategory map[string]string) error {
@@ -126,10 +128,12 @@ func writeEventsCalendar(events map[string]*fbevents.EventData, eventsCalendarPa
 	return nil
 }
 
-func logSummary(eventsCount int, args Args) {
+func logSummary(eventsCount, scrapedEventsCount int, args Args) {
 	log.Printf("Summary:")
 	if !args.FromCache {
-		log.Printf("Scraped %d events", eventsCount)
+		// Only the most overdue hosts are scraped, so most of the events come
+		// from the cache and the total says nothing about this run
+		log.Printf("Scraped %d new events, %d in total with the cached ones", scrapedEventsCount, eventsCount)
 	} else {
 		log.Printf("Loaded %d events from JSON file: %s", eventsCount, args.CacheFile)
 	}
