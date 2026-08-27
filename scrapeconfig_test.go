@@ -22,6 +22,7 @@ func validScrapeConfig() ScrapeConfig {
 		PauseAfterFailureMin:  1 * time.Hour,
 		PauseAfterFailureMax:  2 * time.Hour,
 		MaxFailedHosts:        5,
+		HostsPerRun:           20,
 	}
 }
 
@@ -53,6 +54,7 @@ scrape:
   pause_after_failure_min: 2h
   pause_after_failure_max: 3h
   max_failed_hosts: 2
+  hosts_per_run: 7
 `
 	config, err := loadScrapeConfig(writeConfigFile(t, validConfig))
 	if err != nil {
@@ -70,6 +72,7 @@ scrape:
 		PauseAfterFailureMin:  2 * time.Hour,
 		PauseAfterFailureMax:  3 * time.Hour,
 		MaxFailedHosts:        2,
+		HostsPerRun:           7,
 	}
 	if config != want {
 		t.Errorf("loadScrapeConfig = %+v, want %+v", config, want)
@@ -203,6 +206,11 @@ func TestValidateScrapeConfig(t *testing.T) {
 		{
 			name:        "a missing maximum of failed hosts",
 			breakConfig: func(config *ScrapeConfig) { config.MaxFailedHosts = 0 },
+			valid:       false,
+		},
+		{
+			name:        "a missing number of hosts per run",
+			breakConfig: func(config *ScrapeConfig) { config.HostsPerRun = 0 },
 			valid:       false,
 		},
 	}

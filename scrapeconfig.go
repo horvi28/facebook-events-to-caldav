@@ -21,6 +21,7 @@ type ScrapeConfig struct {
 	PauseAfterFailureMin  time.Duration `yaml:"pause_after_failure_min"`
 	PauseAfterFailureMax  time.Duration `yaml:"pause_after_failure_max"`
 	MaxFailedHosts        int           `yaml:"max_failed_hosts"`
+	HostsPerRun           int           `yaml:"hosts_per_run"`
 }
 
 // configFile is the top level of the config file. The pacing values live under
@@ -77,7 +78,11 @@ func validateScrapeConfig(config ScrapeConfig) error {
 		return err
 	}
 
-	return validateCount("max_failed_hosts", config.MaxFailedHosts)
+	if err := validateCount("max_failed_hosts", config.MaxFailedHosts); err != nil {
+		return err
+	}
+
+	return validateCount("hosts_per_run", config.HostsPerRun)
 }
 
 // loadScrapeConfig reads the pacing values from the config file. The file is
