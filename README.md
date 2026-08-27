@@ -28,6 +28,7 @@ Facebook rarely tags events with a category, so the one you assign drives the co
 | Argument           | Default       | Description                                                     |
 | ------------------ | ------------- | --------------------------------------------------------------- |
 | `--hosts`          | `hosts.yaml`  | Path to the YAML file mapping categories to Facebook host URLs. |
+| `--config`         | `config.yaml` | Path to the YAML file holding the scraping configuration.       |
 | `--from-cache`     | `false`       | Load events from the cache file instead of scraping Facebook.   |
 | `--cache-file`     | `events.json` | Path to the JSON cache file.                                    |
 | `--write-calendar` | `false`       | Write events to a local iCalendar file.                         |
@@ -58,7 +59,28 @@ go run . --from-cache
 
 ## Configuration
 
-Create a local `.env` file using `.env.example` as a template:
+There are two configuration files, split by what belongs in Git.
+
+### `config.yaml`
+
+How the scraper paces itself. It is part of the repository and is **required**. Durations are written with their unit (`5s`, `10m`, `1h`).
+
+| Key                                                      | Description                                                       |
+| -------------------------------------------------------- | ----------------------------------------------------------------- |
+| `pause_between_events_min`<br>`pause_between_events_max` | Wait between fetching the details of two events of the same host. |
+| `pause_between_hosts_min`<br>`pause_between_hosts_max`   | Wait between two hosts.                                           |
+| `long_pause_after_hosts`                                 | How many hosts to scrape before taking a longer break.            |
+| `long_pause_min`<br>`long_pause_max`                     | The length of that longer break.                                  |
+| `pause_after_failure_min`<br>`pause_after_failure_max`   | Wait after a host failed, before moving on to the next one.       |
+| `max_failed_hosts`                                       | Give up the whole run once more than this many hosts have failed. |
+
+Every wait is a random pause somewhere between its minimum and maximum, so each maximum has to be **greater** than its minimum. An equal pair is rejected on purpose.
+
+Lowering the values makes a run finish sooner at the price of looking more like a bot to Facebook.
+
+### `.env`
+
+The CalDAV credentials. Create a local `.env` file using `.env.example` as a template:
 
 ```env
 CALDAV_URL=http://localhost:5232
@@ -67,7 +89,7 @@ CALDAV_PASSWORD=your-password
 CALDAV_CALENDAR_PATH=/your-user/your-calendar-id/
 ```
 
-The `.env` file is ignored by Git so credentials stay local. CalDAV configuration is only needed when running with `--upload-caldav`.
+Unlike `config.yaml`, the `.env` file is ignored by Git so credentials stay local. It is only needed when running with `--upload-caldav`.
 
 ## Scraping behavior
 
@@ -108,12 +130,9 @@ Events are kept for 48 hours after they end, so a scrape running in the evening 
 
 ### Pacing
 
-To avoid hitting Facebook too hard, the scraper waits:
+To avoid hitting Facebook too hard, the scraper waits between the detail requests of two events, between two hosts, and for a good deal longer after every so many hosts. A failed host earns the longest wait of all, and the run is given up entirely once too many hosts have failed.
 
-- 5-20 seconds between the detail requests of two events
-- 10-30 seconds after each host
-- 10-20 minutes after every 10 hosts
-- 1-2 hours after a failed host before continuing, and it gives up entirely once more than 5 hosts have failed
+All of those waits are set in [`config.yaml`](#configyaml) rather than being built in, so the shipped values are a starting point and not a rule.
 
 The host list is processed one host at a time. Events are deduplicated by Facebook event ID, so if the same event appears for multiple hosts, it is only kept once.
 
