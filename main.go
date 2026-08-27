@@ -18,6 +18,7 @@ type Args struct {
 	ConfigFile    string `arg:"--config"         default:"config.yaml" help:"Path to the YAML file that contains the scraping configuration"`
 	FromCache     bool   `arg:"--from-cache"                           help:"Load events from the cache file instead of scraping"`
 	CacheFile     string `arg:"--cache-file"     default:"events.json" help:"Path to the cache file"`
+	StateFile     string `arg:"--state-file"     default:"state.json"  help:"Path to the file that remembers when each host was scraped the last time"`
 	WriteCalendar bool   `arg:"--write-calendar"                       help:"Write events into a local calendar file"`
 	CalendarFile  string `arg:"--calendar-file"  default:"events.ics"  help:"Path to the calendar file"`
 	UploadCalDAV  bool   `arg:"--upload-caldav"                        help:"Upload events to the CalDAV server"`
@@ -42,7 +43,7 @@ func run() error {
 		return err
 	}
 
-	allEvents, err := loadEvents(hostConfig, scrapeConfig, args.FromCache, args.CacheFile)
+	allEvents, err := loadEvents(hostConfig, scrapeConfig, args.FromCache, args.CacheFile, args.StateFile)
 	if err != nil {
 		return err
 	}
@@ -68,7 +69,7 @@ func run() error {
 	return nil
 }
 
-func loadEvents(hostConfig *HostConfig, scrapeConfig ScrapeConfig, fromCache bool, cacheFilePath string) (map[string]*fbevents.EventData, error) {
+func loadEvents(hostConfig *HostConfig, scrapeConfig ScrapeConfig, fromCache bool, cacheFilePath, stateFilePath string) (map[string]*fbevents.EventData, error) {
 	if fromCache {
 		allEvents, err := loadEventsFromJSONFile(cacheFilePath)
 		if err != nil {
@@ -86,9 +87,19 @@ func loadEvents(hostConfig *HostConfig, scrapeConfig ScrapeConfig, fromCache boo
 	// Drop the events that are over, otherwise the cache would only grow
 	cachedEvents = pruneOutdatedEvents(cachedEvents, time.Now())
 
-	scrapedEvents, err := scrapeEventsForHosts(hostConfig, cachedEvents, scrapeConfig)
+	// Remembers when each host was scraped the last time
+	state, err := loadScrapeState(stateFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("load scrape state: %w", err)
+	}
+
+	scrapedEvents, err := scrapeEventsForHosts(hostConfig, cachedEvents, scrapeConfig, state)
 	if err != nil {
 		return nil, fmt.Errorf("scrape events for hosts: %w", err)
+	}
+
+	if err := saveScrapeState(state, stateFilePath); err != nil {
+		return nil, fmt.Errorf("save scrape state: %w", err)
 	}
 
 	// Merge the events in the cache and the newly scraped ones
