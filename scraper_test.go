@@ -7,7 +7,7 @@ import (
 )
 
 func TestShouldScrapeEventDetails(t *testing.T) {
-	cachedEvents := map[string]*fbevents.EventData{
+	cachedEvents := eventsByID{
 		"known": {ID: "known"},
 	}
 
@@ -49,7 +49,7 @@ func TestShouldScrapeEventDetails(t *testing.T) {
 
 func TestShouldScrapeEventDetailsWithEmptyCache(t *testing.T) {
 	shortEvent := fbevents.ShortEventData{ID: "new"}
-	emptyCache := map[string]*fbevents.EventData{}
+	emptyCache := eventsByID{}
 
 	if !shouldScrapeEventDetails(shortEvent, emptyCache) {
 		t.Error("every event needs its details on the very first run")

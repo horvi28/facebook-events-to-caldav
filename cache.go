@@ -17,7 +17,7 @@ import (
 // the calendar still shows what was on earlier.
 const eventRetention = 48 * time.Hour
 
-func eventsMapToSlice(eventsMap map[string]*fbevents.EventData) []*fbevents.EventData {
+func eventsMapToSlice(eventsMap eventsByID) []*fbevents.EventData {
 	eventsSlice := make([]*fbevents.EventData, 0, len(eventsMap))
 	for _, event := range eventsMap {
 		eventsSlice = append(eventsSlice, event)
@@ -25,7 +25,7 @@ func eventsMapToSlice(eventsMap map[string]*fbevents.EventData) []*fbevents.Even
 	return eventsSlice
 }
 
-func dumpEventsToJSONFile(events map[string]*fbevents.EventData, eventsJSONPath string) error {
+func dumpEventsToJSONFile(events eventsByID, eventsJSONPath string) error {
 	eventsSlice := eventsMapToSlice(events)
 	eventsJSON, err := json.MarshalIndent(eventsSlice, "", "  ")
 	if err != nil {
@@ -40,16 +40,16 @@ func dumpEventsToJSONFile(events map[string]*fbevents.EventData, eventsJSONPath 
 	return nil
 }
 
-func eventsSliceToMap(events []*fbevents.EventData) map[string]*fbevents.EventData {
+func eventsSliceToMap(events []*fbevents.EventData) eventsByID {
 	// This also deduplicates events by converting them to a map
-	eventsMap := make(map[string]*fbevents.EventData)
+	eventsMap := make(eventsByID)
 	for _, event := range events {
 		eventsMap[event.ID] = event
 	}
 	return eventsMap
 }
 
-func loadEventsFromJSONFile(eventsJSONPath string) (map[string]*fbevents.EventData, error) {
+func loadEventsFromJSONFile(eventsJSONPath string) (eventsByID, error) {
 	log.Printf("Loading events from JSON file: %s", eventsJSONPath)
 
 	eventsJSON, err := os.ReadFile(eventsJSONPath)
@@ -69,11 +69,11 @@ func loadEventsFromJSONFile(eventsJSONPath string) (map[string]*fbevents.EventDa
 // loadCachedEvents loads the cache file like loadEventsFromJSONFile, but treats a
 // missing file as an empty cache instead of an error. That is the expected state
 // on a first run, while --from-cache should still fail on a missing file.
-func loadCachedEvents(eventsJSONPath string) (map[string]*fbevents.EventData, error) {
+func loadCachedEvents(eventsJSONPath string) (eventsByID, error) {
 	events, err := loadEventsFromJSONFile(eventsJSONPath)
 	if errors.Is(err, os.ErrNotExist) {
 		log.Printf("No cache file at %s yet, starting with an empty cache", eventsJSONPath)
-		return map[string]*fbevents.EventData{}, nil
+		return eventsByID{}, nil
 	}
 	if err != nil {
 		return nil, err
@@ -84,8 +84,8 @@ func loadCachedEvents(eventsJSONPath string) (map[string]*fbevents.EventData, er
 
 // mergeEvents returns the union of the cached and the freshly scraped events.
 // Scraped events win on conflict, as they are the newer data.
-func mergeEvents(cachedEvents, scrapedEvents map[string]*fbevents.EventData) map[string]*fbevents.EventData {
-	mergedEvents := make(map[string]*fbevents.EventData, len(cachedEvents)+len(scrapedEvents))
+func mergeEvents(cachedEvents, scrapedEvents eventsByID) eventsByID {
+	mergedEvents := make(eventsByID, len(cachedEvents)+len(scrapedEvents))
 	maps.Copy(mergedEvents, cachedEvents)
 	// This will overwrite the existing ones
 	maps.Copy(mergedEvents, scrapedEvents)
@@ -113,10 +113,10 @@ func getEventEndTime(event *fbevents.EventData) time.Time {
 //
 // Without this a past event would stay in the cache forever.
 // The current time is a parameter to keep this testable.
-func pruneOutdatedEvents(events map[string]*fbevents.EventData, now time.Time) map[string]*fbevents.EventData {
+func pruneOutdatedEvents(events eventsByID, now time.Time) eventsByID {
 	cutoff := now.Add(-eventRetention)
 
-	keptEvents := make(map[string]*fbevents.EventData, len(events))
+	keptEvents := make(eventsByID, len(events))
 	for eventID, event := range events {
 		// A multi day event that is still running has to be kept, so the end
 		// time decides, not the start one

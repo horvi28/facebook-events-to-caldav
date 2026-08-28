@@ -122,7 +122,7 @@ func convertSingleEventToICal(event *fbevents.EventData, colorByCategory map[str
 	return calendar, nil
 }
 
-func convertEventsToICalCalendar(events map[string]*fbevents.EventData, colorByCategory map[string]string) (*ics.Calendar, error) {
+func convertEventsToICalCalendar(events eventsByID, colorByCategory map[string]string) (*ics.Calendar, error) {
 	log.Printf("Converting %d events to iCal calendar", len(events))
 	// Create calendar
 	calendar := createCalendar()

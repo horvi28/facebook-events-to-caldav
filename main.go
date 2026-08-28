@@ -13,6 +13,9 @@ import (
 
 const defaultCalendarFilePath = "events.ics"
 
+// eventsByID is every known event, keyed by the Facebook event ID
+type eventsByID map[string]*fbevents.EventData
+
 type Args struct {
 	HostsFile     string `arg:"--hosts"          default:"hosts.yaml"  help:"Path to the YAML file that contains Facebook host URLs, for which events should be scraped (mapped to categories with colors)"`
 	ConfigFile    string `arg:"--config"         default:"config.yaml" help:"Path to the YAML file that contains the scraping configuration"`
@@ -44,7 +47,7 @@ func run() error {
 	}
 
 	// Load the events either from the cache or scraping them
-	var allEvents map[string]*fbevents.EventData
+	var allEvents eventsByID
 	var scrapedEventsCount int
 	if args.FromCache {
 		allEvents, err = loadEventsFromJSONFile(args.CacheFile)
@@ -78,7 +81,7 @@ func run() error {
 
 // scrapeAndCacheEvents returns every event that scraped freshly + events from the cache
 // and how many of them were scraped by this run.
-func scrapeAndCacheEvents(hostConfig *HostConfig, scrapeConfig ScrapeConfig, cacheFilePath, stateFilePath string) (map[string]*fbevents.EventData, int, error) {
+func scrapeAndCacheEvents(hostConfig *HostConfig, scrapeConfig ScrapeConfig, cacheFilePath, stateFilePath string) (eventsByID, int, error) {
 	// Keep those events of the hosts that are not scraped this time, but already in the cache
 	cachedEvents, err := loadCachedEvents(cacheFilePath)
 	if err != nil {
@@ -113,7 +116,7 @@ func scrapeAndCacheEvents(hostConfig *HostConfig, scrapeConfig ScrapeConfig, cac
 	return allEvents, len(scrapedEvents), nil
 }
 
-func writeEventsCalendar(events map[string]*fbevents.EventData, eventsCalendarPath string, colorByCategory map[string]string) error {
+func writeEventsCalendar(events eventsByID, eventsCalendarPath string, colorByCategory map[string]string) error {
 	// Convert the events to an iCal calendar and write it to a file
 	calendar, err := convertEventsToICalCalendar(events, colorByCategory)
 	if err != nil {

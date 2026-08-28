@@ -78,7 +78,7 @@ func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData, con
 }
 
 // uploadEventsToCalDAV uploads all events to the CalDAV server
-func uploadEventsToCalDAV(events map[string]*fbevents.EventData, config Config, colorByCategory map[string]string) error {
+func uploadEventsToCalDAV(events eventsByID, config Config, colorByCategory map[string]string) error {
 	// Create a HTTP client with timeout
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,

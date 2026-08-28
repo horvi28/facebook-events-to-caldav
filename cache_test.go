@@ -8,11 +8,11 @@ import (
 )
 
 func TestMergeEventsKeepsCachedAndPrefersScraped(t *testing.T) {
-	cachedEvents := map[string]*fbevents.EventData{
+	cachedEvents := eventsByID{
 		"1": {ID: "1", Name: "Only in cache"},
 		"2": {ID: "2", Name: "Old name"},
 	}
-	scrapedEvents := map[string]*fbevents.EventData{
+	scrapedEvents := eventsByID{
 		"2": {ID: "2", Name: "New name"},
 		"3": {ID: "3", Name: "Only scraped"},
 	}
@@ -37,8 +37,8 @@ func TestMergeEventsKeepsCachedAndPrefersScraped(t *testing.T) {
 }
 
 func TestMergeEventsWithEmptyCache(t *testing.T) {
-	cachedEvents := map[string]*fbevents.EventData{}
-	scrapedEvents := map[string]*fbevents.EventData{
+	cachedEvents := eventsByID{}
+	scrapedEvents := eventsByID{
 		"1": {ID: "1", Name: "First run"},
 	}
 
@@ -50,10 +50,10 @@ func TestMergeEventsWithEmptyCache(t *testing.T) {
 }
 
 func TestMergeEventsWithEmptyScraped(t *testing.T) {
-	cachedEvents := map[string]*fbevents.EventData{
+	cachedEvents := eventsByID{
 		"1": {ID: "1", Name: "Only in cache"},
 	}
-	scrapedEvents := map[string]*fbevents.EventData{}
+	scrapedEvents := eventsByID{}
 
 	mergedEvents := mergeEvents(cachedEvents, scrapedEvents)
 
@@ -145,7 +145,7 @@ func TestPruneOutdatedEvents(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			events := map[string]*fbevents.EventData{testCase.event.ID: testCase.event}
+			events := eventsByID{testCase.event.ID: testCase.event}
 
 			keptEvents := pruneOutdatedEvents(events, now)
 
@@ -158,7 +158,7 @@ func TestPruneOutdatedEvents(t *testing.T) {
 
 func TestPruneOutdatedEventsDoesNotChangeTheInput(t *testing.T) {
 	now := time.Date(2026, time.August, 23, 20, 0, 0, 0, time.UTC)
-	events := map[string]*fbevents.EventData{
+	events := eventsByID{
 		"old": createEventWithoutEndAt("old", now, -30*24*time.Hour),
 	}
 

@@ -17,7 +17,7 @@ func sleepRandom(r *rand.Rand, minimumDuration, maximumDuration time.Duration) {
 
 // shouldScrapeEventDetails tells whether the details of a listed event have to
 // be requested. Every false here saves one request.
-func shouldScrapeEventDetails(shortEvent fbevents.ShortEventData, cachedEvents map[string]*fbevents.EventData) bool {
+func shouldScrapeEventDetails(shortEvent fbevents.ShortEventData, cachedEvents eventsByID) bool {
 	// A cancelled event is not needed
 	if shortEvent.IsCanceled {
 		return false
@@ -53,7 +53,7 @@ func listUpcomingEventsForHost(hostURL string) ([]fbevents.ShortEventData, error
 // we already know. Listing a host costs a single request while its details cost
 // one request per event, so skipping the known ones is what keeps the number of
 // requests low.
-func scrapeEventsForHost(hostURL string, cachedEvents map[string]*fbevents.EventData, randomGenerator *rand.Rand, scrapeConfig ScrapeConfig) ([]*fbevents.EventData, error) {
+func scrapeEventsForHost(hostURL string, cachedEvents eventsByID, randomGenerator *rand.Rand, scrapeConfig ScrapeConfig) ([]*fbevents.EventData, error) {
 	shortEvents, err := listUpcomingEventsForHost(hostURL)
 	if err != nil {
 		return nil, err
@@ -87,12 +87,12 @@ func scrapeEventsForHost(hostURL string, cachedEvents map[string]*fbevents.Event
 //
 // Every host that was scraped successfully gets its time recorded and saved into
 // the state, so a later run can tell how long each one has been waiting.
-func scrapeEventsForHosts(config *HostConfig, cachedEvents map[string]*fbevents.EventData, scrapeConfig ScrapeConfig, state scrapeState) (map[string]*fbevents.EventData, error) {
+func scrapeEventsForHosts(config *HostConfig, cachedEvents eventsByID, scrapeConfig ScrapeConfig, state scrapeState) (eventsByID, error) {
 	hostUrls := selectHostsToScrape(config.Hosts, state, scrapeConfig.HostsPerRun)
 	log.Printf("Start scraping events for the most overdue hosts: %d of the %d hosts", len(hostUrls), len(config.Hosts))
 
 	// Use a map to automatically deduplicate by event ID
-	eventsMap := make(map[string]*fbevents.EventData)
+	eventsMap := make(eventsByID)
 
 	// Random generator to sleep between scrapes of different hosts to avoid hitting Facebook too hard
 	randomGenerator := rand.New(rand.NewSource(time.Now().UnixNano()))
