@@ -10,6 +10,7 @@ A Facebook event scraper that scrapes upcoming events from a list of Facebook ho
 ## Features
 
 - Scrapes upcoming events from Facebook host URLs grouped by category in `hosts.yaml`.
+- Can be configured to scrape only a handful of hosts per run, the ones that have been waiting the longest, so a large host list is covered over several runs instead of in one burst. See [Spreading the hosts over several runs](#spreading-the-hosts-over-several-runs).
 - Deduplicates events by Facebook event ID.
 - Can write a local `events.ics` calendar file, colored by your own per-category colors.
 - Keeps the scraped events in `events.json`, which doubles as the record of what has already been fetched, so the details of an event are only ever requested once. See [The event cache](#the-event-cache) section.
@@ -31,6 +32,7 @@ Facebook rarely tags events with a category, so the one you assign drives the co
 | `--config`         | `config.yaml` | Path to the YAML file holding the scraping configuration.       |
 | `--from-cache`     | `false`       | Load events from the cache file instead of scraping Facebook.   |
 | `--cache-file`     | `events.json` | Path to the JSON cache file.                                    |
+| `--state-file`     | `state.json`  | Path to the file remembering when each host was last scraped.   |
 | `--write-calendar` | `false`       | Write events to a local iCalendar file.                         |
 | `--calendar-file`  | `events.ics`  | Path to the local iCalendar file. Requires `--write-calendar`.  |
 | `--upload-caldav`  | `false`       | Upload events to the configured CalDAV server.                  |
@@ -73,6 +75,7 @@ How the scraper paces itself. It is part of the repository and is **required**. 
 | `long_pause_min`<br>`long_pause_max`                     | The length of that longer break.                                  |
 | `pause_after_failure_min`<br>`pause_after_failure_max`   | Wait after a host failed, before moving on to the next one.       |
 | `max_failed_hosts`                                       | Give up the whole run once more than this many hosts have failed. |
+| `hosts_per_run`                                          | How many hosts a single run scrapes.                              |
 
 Every wait is a random pause somewhere between its minimum and maximum, so each maximum has to be **greater** than its minimum. An equal pair is rejected on purpose.
 
@@ -104,7 +107,7 @@ Scraping a host is not a single request. It happens in two phases:
 1. **Listing** the host's upcoming events. One request, and it returns only a summary of each event.
 2. **Fetching the details** of an event. One request *per event*, for the details of the event.
 
-So a host with 20 upcoming events would cost 21 requests, and the detail requests are by far the larger part of the total. To try to keep that number down and event cache is used.
+So a host with 20 upcoming events would cost 21 requests, and the detail requests are by far the larger part of the total. Two things keep that number down: an event cache, so a detail request is only ever paid once, and scraping only a few hosts per run instead of the whole list.
 
 ### The event cache
 
@@ -128,13 +131,26 @@ Two consequences worth knowing:
 
 Events are kept for 48 hours after they end, so a scrape running in the evening does not empty out the current day. An event without an end time, which is roughly half of them, counts as ending when it starts.
 
+### Spreading the hosts over several runs
+
+A run does not scrape every host. It takes the `hosts_per_run` hosts that have been waiting the longest and leaves the rest for the next runs, so a long `hosts.yaml` is worked through over multiple runs rather than in a single burst.
+
+`state.json` is what remembers this: it maps each host URL to the time it was last scraped successfully. Hosts missing from it have never been scraped and go first, and hosts that are equally overdue keep the order of the hosts file.
+
+Two details worth knowing:
+
+- **A failed host is not recorded.** It stays overdue on purpose, so the next run picks it up again.
+- **Deleting `state.json` is harmless.** Every host simply looks never-scraped again, and the hosts file order decides. No events are lost, as those live in `events.json`.
+
+If you want to scrape everything in one run, set `hosts_per_run` to an equal or higher number than the hosts in `hosts.yaml`.
+
 ### Pacing
 
 To avoid hitting Facebook too hard, the scraper waits between the detail requests of two events, between two hosts, and for a good deal longer after every so many hosts. A failed host earns the longest wait of all, and the run is given up entirely once too many hosts have failed.
 
 All of those waits are set in [`config.yaml`](#configyaml) rather than being built in, so the shipped values are a starting point and not a rule.
 
-The host list is processed one host at a time. Events are deduplicated by Facebook event ID, so if the same event appears for multiple hosts, it is only kept once.
+The hosts of a run are processed one at a time. Events are deduplicated by Facebook event ID, so if the same event appears for multiple hosts, it is only kept once.
 
 ## My setup
 
