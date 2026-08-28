@@ -43,7 +43,14 @@ func run() error {
 		return err
 	}
 
-	allEvents, scrapedEventsCount, err := loadEvents(hostConfig, scrapeConfig, args.FromCache, args.CacheFile, args.StateFile)
+	// Load the events either from the cache or scraping them
+	var allEvents map[string]*fbevents.EventData
+	var scrapedEventsCount int
+	if args.FromCache {
+		allEvents, err = loadEventsFromJSONFile(args.CacheFile)
+	} else {
+		allEvents, scrapedEventsCount, err = scrapeAndCacheEvents(hostConfig, scrapeConfig, args.CacheFile, args.StateFile)
+	}
 	if err != nil {
 		return err
 	}
@@ -69,17 +76,9 @@ func run() error {
 	return nil
 }
 
-// loadEvents returns every event scraped or loaded from the cache and how many
-// of them were scraped by this run.
-func loadEvents(hostConfig *HostConfig, scrapeConfig ScrapeConfig, fromCache bool, cacheFilePath, stateFilePath string) (map[string]*fbevents.EventData, int, error) {
-	if fromCache {
-		allEvents, err := loadEventsFromJSONFile(cacheFilePath)
-		if err != nil {
-			return nil, 0, fmt.Errorf("load events from JSON file: %w", err)
-		}
-		return allEvents, 0, nil
-	}
-
+// scrapeAndCacheEvents returns every event that scraped freshly + events from the cache
+// and how many of them were scraped by this run.
+func scrapeAndCacheEvents(hostConfig *HostConfig, scrapeConfig ScrapeConfig, cacheFilePath, stateFilePath string) (map[string]*fbevents.EventData, int, error) {
 	// Keep those events of the hosts that are not scraped this time, but already in the cache
 	cachedEvents, err := loadCachedEvents(cacheFilePath)
 	if err != nil {
