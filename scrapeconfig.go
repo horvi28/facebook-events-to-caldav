@@ -8,20 +8,22 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// pauseRange is the bounds of a random pause.
+type pauseRange struct {
+	Min time.Duration `yaml:"min"`
+	Max time.Duration `yaml:"max"`
+}
+
 // ScrapeConfig holds the pacing values that decide how hard Facebook is hit.
 // Every value comes from the config file, there are no defaults in the code.
 type ScrapeConfig struct {
-	PauseBetweenEventsMin time.Duration `yaml:"pause_between_events_min"`
-	PauseBetweenEventsMax time.Duration `yaml:"pause_between_events_max"`
-	PauseBetweenHostsMin  time.Duration `yaml:"pause_between_hosts_min"`
-	PauseBetweenHostsMax  time.Duration `yaml:"pause_between_hosts_max"`
-	LongPauseAfterHosts   int           `yaml:"long_pause_after_hosts"`
-	LongPauseMin          time.Duration `yaml:"long_pause_min"`
-	LongPauseMax          time.Duration `yaml:"long_pause_max"`
-	PauseAfterFailureMin  time.Duration `yaml:"pause_after_failure_min"`
-	PauseAfterFailureMax  time.Duration `yaml:"pause_after_failure_max"`
-	MaxFailedHosts        int           `yaml:"max_failed_hosts"`
-	HostsPerRun           int           `yaml:"hosts_per_run"`
+	PauseBetweenEvents  pauseRange `yaml:"pause_between_events"`
+	PauseBetweenHosts   pauseRange `yaml:"pause_between_hosts"`
+	LongPauseAfterHosts int        `yaml:"long_pause_after_hosts"`
+	LongPause           pauseRange `yaml:"long_pause"`
+	PauseAfterFailure   pauseRange `yaml:"pause_after_failure"`
+	MaxFailedHosts      int        `yaml:"max_failed_hosts"`
+	HostsPerRun         int        `yaml:"hosts_per_run"`
 }
 
 // configFile is the top level of the config file. The pacing values live under
@@ -30,15 +32,15 @@ type configFile struct {
 	Scrape ScrapeConfig `yaml:"scrape"`
 }
 
-// validateRange checks a min/max pair of the config file. A maximum that is not
-// above its minimum would panic in sleepRandom, and a missing key parses as a
-// zero, which is why both values have to be positive.
-func validateRange(minimumKey string, minimumValue time.Duration, maximumKey string, maximumValue time.Duration) error {
-	if minimumValue <= 0 {
-		return fmt.Errorf("%s must be a positive duration, got %v", minimumKey, minimumValue)
+// validate checks a pause of the config file. A maximum that is not above its
+// minimum would panic in sleepRandom, and a missing key parses as a zero, which
+// is why both values have to be positive.
+func (pause pauseRange) validate(key string) error {
+	if pause.Min <= 0 {
+		return fmt.Errorf("%s.min must be a positive duration, got %v", key, pause.Min)
 	}
-	if maximumValue <= minimumValue {
-		return fmt.Errorf("%s (%v) must be greater than %s (%v)", maximumKey, maximumValue, minimumKey, minimumValue)
+	if pause.Max <= pause.Min {
+		return fmt.Errorf("%s.max (%v) must be greater than %s.min (%v)", key, pause.Max, key, pause.Min)
 	}
 
 	return nil
@@ -56,19 +58,19 @@ func validateCount(key string, value int) error {
 
 // validateScrapeConfig rejects a config that would make the scraper panic
 func validateScrapeConfig(config ScrapeConfig) error {
-	ranges := []struct {
-		minimumKey   string
-		minimumValue time.Duration
-		maximumKey   string
-		maximumValue time.Duration
+	// A slice and not a map, as a map would report a random one of the broken
+	// pauses instead of always the first one
+	pauses := []struct {
+		key        string
+		pauseRange pauseRange
 	}{
-		{"pause_between_events_min", config.PauseBetweenEventsMin, "pause_between_events_max", config.PauseBetweenEventsMax},
-		{"pause_between_hosts_min", config.PauseBetweenHostsMin, "pause_between_hosts_max", config.PauseBetweenHostsMax},
-		{"long_pause_min", config.LongPauseMin, "long_pause_max", config.LongPauseMax},
-		{"pause_after_failure_min", config.PauseAfterFailureMin, "pause_after_failure_max", config.PauseAfterFailureMax},
+		{"pause_between_events", config.PauseBetweenEvents},
+		{"pause_between_hosts", config.PauseBetweenHosts},
+		{"long_pause", config.LongPause},
+		{"pause_after_failure", config.PauseAfterFailure},
 	}
-	for _, valueRange := range ranges {
-		if err := validateRange(valueRange.minimumKey, valueRange.minimumValue, valueRange.maximumKey, valueRange.maximumValue); err != nil {
+	for _, pause := range pauses {
+		if err := pause.pauseRange.validate(pause.key); err != nil {
 			return err
 		}
 	}

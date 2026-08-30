@@ -69,11 +69,11 @@ How the scraper paces itself. It is part of the repository and is **required**. 
 
 | Key                                                      | Description                                                       |
 | -------------------------------------------------------- | ----------------------------------------------------------------- |
-| `pause_between_events_min`<br>`pause_between_events_max` | Wait between fetching the details of two events of the same host. |
-| `pause_between_hosts_min`<br>`pause_between_hosts_max`   | Wait between two hosts.                                           |
+| `pause_between_events.min`<br>`pause_between_events.max` | Wait between fetching the details of two events of the same host. |
+| `pause_between_hosts.min`<br>`pause_between_hosts.max`   | Wait between two hosts.                                           |
 | `long_pause_after_hosts`                                 | How many hosts to scrape before taking a longer break.            |
-| `long_pause_min`<br>`long_pause_max`                     | The length of that longer break.                                  |
-| `pause_after_failure_min`<br>`pause_after_failure_max`   | Wait after a host failed, before moving on to the next one.       |
+| `long_pause.min`<br>`long_pause.max`                     | The length of that longer break.                                  |
+| `pause_after_failure.min`<br>`pause_after_failure.max`   | Wait after a host failed, before moving on to the next one.       |
 | `max_failed_hosts`                                       | Give up the whole run once more than this many hosts have failed. |
 | `hosts_per_run`                                          | How many hosts a single run scrapes.                              |
 

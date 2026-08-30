@@ -12,17 +12,13 @@ import (
 // interested in one of them.
 func validScrapeConfig() ScrapeConfig {
 	return ScrapeConfig{
-		PauseBetweenEventsMin: 5 * time.Second,
-		PauseBetweenEventsMax: 20 * time.Second,
-		PauseBetweenHostsMin:  10 * time.Second,
-		PauseBetweenHostsMax:  30 * time.Second,
-		LongPauseAfterHosts:   10,
-		LongPauseMin:          10 * time.Minute,
-		LongPauseMax:          20 * time.Minute,
-		PauseAfterFailureMin:  1 * time.Hour,
-		PauseAfterFailureMax:  2 * time.Hour,
-		MaxFailedHosts:        5,
-		HostsPerRun:           20,
+		PauseBetweenEvents:  pauseRange{Min: 5 * time.Second, Max: 20 * time.Second},
+		PauseBetweenHosts:   pauseRange{Min: 10 * time.Second, Max: 30 * time.Second},
+		LongPauseAfterHosts: 10,
+		LongPause:           pauseRange{Min: 10 * time.Minute, Max: 20 * time.Minute},
+		PauseAfterFailure:   pauseRange{Min: 1 * time.Hour, Max: 2 * time.Hour},
+		MaxFailedHosts:      5,
+		HostsPerRun:         20,
 	}
 }
 
@@ -44,15 +40,19 @@ func TestLoadScrapeConfig(t *testing.T) {
 	// on purpose, to show that any of them is understood
 	const validConfig = `
 scrape:
-  pause_between_events_min: 3s
-  pause_between_events_max: 7m
-  pause_between_hosts_min: 1500ms
-  pause_between_hosts_max: 2s
+  pause_between_events:
+    min: 3s
+    max: 7m
+  pause_between_hosts:
+    min: 1500ms
+    max: 2s
   long_pause_after_hosts: 4
-  long_pause_min: 1m
-  long_pause_max: 1h30m
-  pause_after_failure_min: 2h
-  pause_after_failure_max: 3h
+  long_pause:
+    min: 1m
+    max: 1h30m
+  pause_after_failure:
+    min: 2h
+    max: 3h
   max_failed_hosts: 2
   hosts_per_run: 7
 `
@@ -62,17 +62,13 @@ scrape:
 	}
 
 	want := ScrapeConfig{
-		PauseBetweenEventsMin: 3 * time.Second,
-		PauseBetweenEventsMax: 7 * time.Minute,
-		PauseBetweenHostsMin:  1500 * time.Millisecond,
-		PauseBetweenHostsMax:  2 * time.Second,
-		LongPauseAfterHosts:   4,
-		LongPauseMin:          1 * time.Minute,
-		LongPauseMax:          90 * time.Minute,
-		PauseAfterFailureMin:  2 * time.Hour,
-		PauseAfterFailureMax:  3 * time.Hour,
-		MaxFailedHosts:        2,
-		HostsPerRun:           7,
+		PauseBetweenEvents:  pauseRange{Min: 3 * time.Second, Max: 7 * time.Minute},
+		PauseBetweenHosts:   pauseRange{Min: 1500 * time.Millisecond, Max: 2 * time.Second},
+		LongPauseAfterHosts: 4,
+		LongPause:           pauseRange{Min: 1 * time.Minute, Max: 90 * time.Minute},
+		PauseAfterFailure:   pauseRange{Min: 2 * time.Hour, Max: 3 * time.Hour},
+		MaxFailedHosts:      2,
+		HostsPerRun:         7,
 	}
 	if config != want {
 		t.Errorf("loadScrapeConfig = %+v, want %+v", config, want)
@@ -127,7 +123,7 @@ func TestLoadScrapeConfigRejectsUnparsableDurations(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			content := "scrape:\n  pause_between_events_min: " + testCase.value + "\n  pause_between_events_max: 20s\n"
+			content := "scrape:\n  pause_between_events:\n    min: " + testCase.value + "\n    max: 20s\n"
 
 			_, err := loadScrapeConfig(writeConfigFile(t, content))
 			if err == nil {
@@ -159,43 +155,45 @@ func TestValidateScrapeConfig(t *testing.T) {
 		},
 		// For the invalid test cases, breakConfig will change a value in the validScrapeConfig() to make it invalid and test it
 		{
-			name:        "the pause between events is inverted",
-			breakConfig: func(config *ScrapeConfig) { config.PauseBetweenEventsMax = config.PauseBetweenEventsMin - time.Second },
-			valid:       false,
+			name: "the pause between events is inverted",
+			breakConfig: func(config *ScrapeConfig) {
+				config.PauseBetweenEvents.Max = config.PauseBetweenEvents.Min - time.Second
+			},
+			valid: false,
 		},
 		{
 			name:        "the pause between hosts is inverted",
-			breakConfig: func(config *ScrapeConfig) { config.PauseBetweenHostsMax = config.PauseBetweenHostsMin - time.Second },
+			breakConfig: func(config *ScrapeConfig) { config.PauseBetweenHosts.Max = config.PauseBetweenHosts.Min - time.Second },
 			valid:       false,
 		},
 		{
 			name:        "the long pause is inverted",
-			breakConfig: func(config *ScrapeConfig) { config.LongPauseMax = config.LongPauseMin - time.Second },
+			breakConfig: func(config *ScrapeConfig) { config.LongPause.Max = config.LongPause.Min - time.Second },
 			valid:       false,
 		},
 		{
 			name:        "the pause after a failure is inverted",
-			breakConfig: func(config *ScrapeConfig) { config.PauseAfterFailureMax = config.PauseAfterFailureMin - time.Second },
+			breakConfig: func(config *ScrapeConfig) { config.PauseAfterFailure.Max = config.PauseAfterFailure.Min - time.Second },
 			valid:       false,
 		},
 		{
 			name:        "a maximum equal to its minimum",
-			breakConfig: func(config *ScrapeConfig) { config.PauseBetweenEventsMax = config.PauseBetweenEventsMin },
+			breakConfig: func(config *ScrapeConfig) { config.PauseBetweenEvents.Max = config.PauseBetweenEvents.Min },
 			valid:       false,
 		},
 		{
 			name:        "a missing minimum",
-			breakConfig: func(config *ScrapeConfig) { config.PauseBetweenEventsMin = 0 },
+			breakConfig: func(config *ScrapeConfig) { config.PauseBetweenEvents.Min = 0 },
 			valid:       false,
 		},
 		{
 			name:        "a missing maximum",
-			breakConfig: func(config *ScrapeConfig) { config.PauseBetweenEventsMax = 0 },
+			breakConfig: func(config *ScrapeConfig) { config.PauseBetweenEvents.Max = 0 },
 			valid:       false,
 		},
 		{
 			name:        "a negative minimum",
-			breakConfig: func(config *ScrapeConfig) { config.PauseBetweenEventsMin = -5 * time.Second },
+			breakConfig: func(config *ScrapeConfig) { config.PauseBetweenEvents.Min = -5 * time.Second },
 			valid:       false,
 		},
 		{
@@ -246,13 +244,20 @@ func TestValidateScrapeConfig(t *testing.T) {
 func TestLoadScrapeConfigValidatesTheValues(t *testing.T) {
 	const invalidConfig = `
 scrape:
-  pause_between_events_min: 20s
-  pause_between_events_max: 5s
+  pause_between_events:
+    min: 20s
+    max: 5s
 `
 	path := writeConfigFile(t, invalidConfig)
 
 	_, err := loadScrapeConfig(path)
 	if err == nil {
 		t.Fatal("expected the loader to reject a maximum below its minimum")
+	}
+	// The error has to be about the inverted pause. An unknown key is silently
+	// ignored by the YAML library, so without this the test would also pass on a
+	// config that says nothing at all.
+	if !strings.Contains(err.Error(), "pause_between_events.max") {
+		t.Errorf("error %q is not about the inverted pause", err)
 	}
 }
