@@ -13,9 +13,16 @@ import (
 	fbevents "github.com/grucha/facebook-events-scraper"
 )
 
+const (
+	// A single upload, including reading back the response
+	caldavRequestTimeout = 30 * time.Second
+	// Only the beginning of a failed response is logged, the rest is noise
+	maxErrorResponseBytes = 4096
+)
+
 func doRequest(httpClient *http.Client, method, url, username, password string, body *strings.Reader) (*http.Response, error) {
 	// Use a per-request timeout so one slow request doesn't hang the whole run
-	requestCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	requestCtx, cancel := context.WithTimeout(context.Background(), caldavRequestTimeout)
 	defer cancel()
 
 	// Use a direct HTTP PUT so we can set Content-Type explicitly
@@ -64,7 +71,7 @@ func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData, con
 	}()
 
 	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
-		responseBody, readErr := io.ReadAll(io.LimitReader(response.Body, 4096))
+		responseBody, readErr := io.ReadAll(io.LimitReader(response.Body, maxErrorResponseBytes))
 		if readErr != nil {
 			return fmt.Errorf("read failed upload response for event %q: %w", event.Name, readErr)
 		}
@@ -79,10 +86,7 @@ func uploadEventToCalDAV(httpClient *http.Client, event *fbevents.EventData, con
 
 // uploadEventsToCalDAV uploads all events to the CalDAV server
 func uploadEventsToCalDAV(events eventsByID, config Config, colorByCategory map[string]string) error {
-	// Create a HTTP client with timeout
-	httpClient := &http.Client{
-		Timeout: 10 * time.Second,
-	}
+	httpClient := &http.Client{}
 
 	// Upload each event
 	var uploadErrors []error
