@@ -26,9 +26,9 @@ type ScrapeConfig struct {
 	HostsPerRun         int        `yaml:"hosts_per_run"`
 }
 
-// configFile is the top level of the config file. The pacing values live under
-// their own key to leave room for the batch and daemon settings later on.
-type configFile struct {
+// AppConfig is the whole config file. Every group of settings lives under its
+// own key, so a new one can be added without disturbing the others.
+type AppConfig struct {
 	Scrape ScrapeConfig `yaml:"scrape"`
 }
 
@@ -87,22 +87,22 @@ func validateScrapeConfig(config ScrapeConfig) error {
 	return validateCount("hosts_per_run", config.HostsPerRun)
 }
 
-// loadScrapeConfig reads the pacing values from the config file. The file is
-// required, as the scraper has no built-in values to fall back to.
-func loadScrapeConfig(configFilePath string) (ScrapeConfig, error) {
+// loadAppConfig reads the config file. The file is required, as the scraper has
+// no built-in values to fall back to.
+func loadAppConfig(configFilePath string) (AppConfig, error) {
 	data, err := os.ReadFile(configFilePath)
 	if err != nil {
-		return ScrapeConfig{}, fmt.Errorf("read config file %s: %w", configFilePath, err)
+		return AppConfig{}, fmt.Errorf("read config file %s: %w", configFilePath, err)
 	}
 
-	var file configFile
-	if err := yaml.Unmarshal(data, &file); err != nil {
-		return ScrapeConfig{}, fmt.Errorf("parse config file %s: %w", configFilePath, err)
+	var config AppConfig
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return AppConfig{}, fmt.Errorf("parse config file %s: %w", configFilePath, err)
 	}
 
-	if err := validateScrapeConfig(file.Scrape); err != nil {
-		return ScrapeConfig{}, fmt.Errorf("invalid config file %s: %w", configFilePath, err)
+	if err := validateScrapeConfig(config.Scrape); err != nil {
+		return AppConfig{}, fmt.Errorf("invalid config file %s: %w", configFilePath, err)
 	}
 
-	return file.Scrape, nil
+	return config, nil
 }

@@ -35,7 +35,7 @@ func writeConfigFile(t *testing.T, content string) string {
 	return path
 }
 
-func TestLoadScrapeConfig(t *testing.T) {
+func TestLoadAppConfig(t *testing.T) {
 	// Every value differs from the shipped config.yaml, and the units are mixed
 	// on purpose, to show that any of them is understood
 	const validConfig = `
@@ -56,9 +56,9 @@ scrape:
   max_failed_hosts: 2
   hosts_per_run: 7
 `
-	config, err := loadScrapeConfig(writeConfigFile(t, validConfig))
+	config, err := loadAppConfig(writeConfigFile(t, validConfig))
 	if err != nil {
-		t.Fatalf("loadScrapeConfig: %v", err)
+		t.Fatalf("loadAppConfig: %v", err)
 	}
 
 	want := ScrapeConfig{
@@ -70,23 +70,23 @@ scrape:
 		MaxFailedHosts:      2,
 		HostsPerRun:         7,
 	}
-	if config != want {
-		t.Errorf("loadScrapeConfig = %+v, want %+v", config, want)
+	if config.Scrape != want {
+		t.Errorf("loadAppConfig = %+v, want %+v", config.Scrape, want)
 	}
 }
 
-// TestLoadScrapeConfigFromRepositoryFile checks that the config file shipped
+// TestLoadAppConfigFromRepositoryFile checks that the config file shipped
 // with the project is a valid one, as nothing else would notice a typo in it.
-func TestLoadScrapeConfigFromRepositoryFile(t *testing.T) {
-	if _, err := loadScrapeConfig("config.yaml"); err != nil {
+func TestLoadAppConfigFromRepositoryFile(t *testing.T) {
+	if _, err := loadAppConfig("config.yaml"); err != nil {
 		t.Fatalf("the config.yaml of the repository is not valid: %v", err)
 	}
 }
 
-func TestLoadScrapeConfigWithoutFile(t *testing.T) {
+func TestLoadAppConfigWithoutFile(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "missing.yaml")
 
-	_, err := loadScrapeConfig(path)
+	_, err := loadAppConfig(path)
 	if err == nil {
 		t.Fatal("a missing config file has to be an error, the scraper has no defaults to fall back to")
 	}
@@ -95,10 +95,10 @@ func TestLoadScrapeConfigWithoutFile(t *testing.T) {
 	}
 }
 
-// TestLoadScrapeConfigRejectsUnparsableDurations covers the values that never
+// TestLoadAppConfigRejectsUnparsableDurations covers the values that never
 // reach the validation, because the YAML library itself refuses to turn them
 // into a duration. Those errors point at the line instead of naming the key.
-func TestLoadScrapeConfigRejectsUnparsableDurations(t *testing.T) {
+func TestLoadAppConfigRejectsUnparsableDurations(t *testing.T) {
 	testCases := []struct {
 		name        string
 		value       string
@@ -125,7 +125,7 @@ func TestLoadScrapeConfigRejectsUnparsableDurations(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			content := "scrape:\n  pause_between_events:\n    min: " + testCase.value + "\n    max: 20s\n"
 
-			_, err := loadScrapeConfig(writeConfigFile(t, content))
+			_, err := loadAppConfig(writeConfigFile(t, content))
 			if err == nil {
 				t.Fatal("expected an error, got none")
 			}
@@ -239,9 +239,9 @@ func TestValidateScrapeConfig(t *testing.T) {
 	}
 }
 
-// TestLoadScrapeConfigValidatesTheValues makes sure the loader actually runs the
+// TestLoadAppConfigValidatesTheValues makes sure the loader actually runs the
 // validation, as the cases above call it directly.
-func TestLoadScrapeConfigValidatesTheValues(t *testing.T) {
+func TestLoadAppConfigValidatesTheValues(t *testing.T) {
 	const invalidConfig = `
 scrape:
   pause_between_events:
@@ -250,7 +250,7 @@ scrape:
 `
 	path := writeConfigFile(t, invalidConfig)
 
-	_, err := loadScrapeConfig(path)
+	_, err := loadAppConfig(path)
 	if err == nil {
 		t.Fatal("expected the loader to reject a maximum below its minimum")
 	}

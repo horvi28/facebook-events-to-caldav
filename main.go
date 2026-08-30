@@ -45,7 +45,7 @@ func run() error {
 		return err
 	}
 
-	scrapeConfig, err := loadScrapeConfig(args.ConfigFile)
+	appConfig, err := loadAppConfig(args.ConfigFile)
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func run() error {
 	if args.FromCache {
 		allEvents, err = loadEventsFromJSONFile(args.CacheFile)
 	} else {
-		allEvents, scrapedEventsCount, err = scrapeAndCacheEvents(hostConfig, scrapeConfig, args.CacheFile, args.StateFile)
+		allEvents, scrapedEventsCount, err = scrapeAndCacheEvents(hostConfig, appConfig.Scrape, args.CacheFile, args.StateFile)
 	}
 	if err != nil {
 		return err
