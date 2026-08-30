@@ -3,6 +3,7 @@ version: "2"
 linters:
   enable:
     - asasalint
+    - asciicheck
     - bidichk
     - bodyclose
     - canonicalheader
@@ -17,22 +18,33 @@ linters:
     - embeddedstructfieldcheck
     - errcheck
     - errchkjson
-    - errorlint
     - errname
+    - errorlint
     - exptostd
+    - forbidigo
+    - forcetypeassert
     - funcorder
     - funlen
+    - gocheckcompilerdirectives
+    - gochecknoglobals
+    - gochecknoinits
     - gocognit
     - goconst
     - gocritic
+    - godoclint
+    - gosec
     - govet
     - iface
+    - importas
     - ineffassign
     - interfacebloat
     - intrange
-    - importas
+    - lll
     - maintidx
+    - makezero
+    - mirror
     - misspell
+    - mnd
     - modernize
     - musttag
     - nestif
@@ -40,9 +52,13 @@ linters:
     - nilnesserr
     - nilnil
     - noctx
+    - nolintlint
+    - nonamedreturns
     - perfsprint
     - prealloc
     - predeclared
+    - reassign
+    - recvcheck
     - revive
     - sloglint
     - staticcheck
@@ -52,6 +68,8 @@ linters:
     - unconvert
     - unparam
     - unused
+    - usestdlibvars
+    - usetesting
     - varnamelen
     - wastedassign
     - whitespace
@@ -65,6 +83,20 @@ linters:
       # value independently. Extracting them does not make any sense, so tests
       # are left out of the analysis.
       ignore-tests: true
+    gosec:
+      # The created files are read by hand, so they have to stay
+      # readable outside the process that wrote them
+      config:
+        G306: "0644"
+      # The file paths come from CLI flags and the random sleeps are jitter,
+      # not a security decision.
+      excludes:
+        - G304
+        - G404
+    lll:
+      # Long enough to leave the aligned struct tags alone, short enough to
+      # catch a parameter list that no longer fits on a screen
+      line-length: 140
     tagalign:
       sort: true
       strict: true

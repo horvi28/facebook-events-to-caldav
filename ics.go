@@ -161,7 +161,7 @@ func writeCalendarToFile(calendar *ics.Calendar, filePath string) error {
 	}
 
 	calendarContent := calendar.Serialize()
-	if err := os.WriteFile(filePath, []byte(calendarContent), 0o644); err != nil {
+	if err := os.WriteFile(filePath, []byte(calendarContent), fileMode); err != nil {
 		return fmt.Errorf("write calendar file %s: %w", filePath, err)
 	}
 

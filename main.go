@@ -13,6 +13,10 @@ import (
 
 const defaultCalendarFilePath = "events.ics"
 
+// fileMode is used for every file the scraper writes. They are readable
+// outside the process that wrote them, as they are looked into by hand sometimes
+const fileMode = 0o644
+
 // eventsByID is every known event, keyed by the Facebook event ID
 type eventsByID map[string]*fbevents.EventData
 

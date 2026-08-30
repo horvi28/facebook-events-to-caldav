@@ -53,7 +53,12 @@ func listUpcomingEventsForHost(hostURL string) ([]fbevents.ShortEventData, error
 // we already know. Listing a host costs a single request while its details cost
 // one request per event, so skipping the known ones is what keeps the number of
 // requests low.
-func scrapeEventsForHost(hostURL string, cachedEvents eventsByID, randomGenerator *rand.Rand, scrapeConfig ScrapeConfig) ([]*fbevents.EventData, error) {
+func scrapeEventsForHost(
+	hostURL string,
+	cachedEvents eventsByID,
+	randomGenerator *rand.Rand,
+	scrapeConfig ScrapeConfig,
+) ([]*fbevents.EventData, error) {
 	shortEvents, err := listUpcomingEventsForHost(hostURL)
 	if err != nil {
 		return nil, err
@@ -135,7 +140,7 @@ func scrapeEventsForHosts(config *HostConfig, cachedEvents eventsByID, scrapeCon
 
 		// Big pause after every so many profiles
 		if eventNumber%scrapeConfig.LongPauseAfterHosts == 0 {
-			log.Printf("[%d/%d] Scraping events, sleeping for %v-%v", eventNumber, len(hostUrls), scrapeConfig.LongPauseMin, scrapeConfig.LongPauseMax)
+			log.Printf("[%d/%d] host done, sleeping for %v-%v", eventNumber, len(hostUrls), scrapeConfig.LongPauseMin, scrapeConfig.LongPauseMax)
 			sleepRandom(randomGenerator, scrapeConfig.LongPauseMin, scrapeConfig.LongPauseMax)
 		} else {
 			// Small sleep between every profile
