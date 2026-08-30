@@ -104,6 +104,9 @@ func scrapeEventsForHosts(config *HostConfig, cachedEvents eventsByID, scrapeCon
 	var scrapeErrors []error
 	for index, hostURL := range hostUrls {
 		eventNumber := index + 1
+		// Every pause below is there to space out two hosts, so after the last
+		// one it would only delay the end of the run
+		isLastHost := eventNumber == len(hostUrls)
 		log.Printf("[%d/%d] Scraping events for %s", eventNumber, len(hostUrls), hostURL)
 		events, err := scrapeEventsForHost(hostURL, cachedEvents, randomGenerator, scrapeConfig)
 		if err != nil {
@@ -113,7 +116,9 @@ func scrapeEventsForHosts(config *HostConfig, cachedEvents eventsByID, scrapeCon
 				return eventsMap, fmt.Errorf("stop scraping after %d failed hosts: %w", len(scrapeErrors), errors.Join(scrapeErrors...))
 			}
 			// If a host fails, sleep a long time before continuing, just to be safe and avoid hitting Facebook too hard
-			sleepRandom(randomGenerator, scrapeConfig.PauseAfterFailureMin, scrapeConfig.PauseAfterFailureMax)
+			if !isLastHost {
+				sleepRandom(randomGenerator, scrapeConfig.PauseAfterFailureMin, scrapeConfig.PauseAfterFailureMax)
+			}
 			continue // Skip this host and continue with next
 		}
 
@@ -137,6 +142,11 @@ func scrapeEventsForHosts(config *HostConfig, cachedEvents eventsByID, scrapeCon
 			event.Categories = append([]fbevents.EventCategory{fallbackCategory}, event.Categories...)
 		}
 		log.Printf("Added %d events from %s (total unique: %d)", len(events), hostURL, len(eventsMap))
+
+		// If the was the lost host to scrape no more sleep is needed
+		if isLastHost {
+			continue
+		}
 
 		// Big pause after every so many profiles
 		if eventNumber%scrapeConfig.LongPauseAfterHosts == 0 {
