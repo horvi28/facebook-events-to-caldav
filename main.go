@@ -17,14 +17,14 @@ const defaultCalendarFilePath = "events.ics"
 type eventsByID map[string]*fbevents.EventData
 
 type Args struct {
-	HostsFile     string `arg:"--hosts"          default:"hosts.yaml"  help:"Path to the YAML file that contains Facebook host URLs, for which events should be scraped (mapped to categories with colors)"`
-	ConfigFile    string `arg:"--config"         default:"config.yaml" help:"Path to the YAML file that contains the scraping configuration"`
+	HostsFile     string `arg:"--hosts"          default:"hosts.yaml"  help:"File contains host's urls, for which events should be scraped"`
+	ConfigFile    string `arg:"--config"         default:"config.yaml" help:"File that contains the scraping configuration"`
 	FromCache     bool   `arg:"--from-cache"                           help:"Load events from the cache file instead of scraping"`
-	CacheFile     string `arg:"--cache-file"     default:"events.json" help:"Path to the cache file"`
-	StateFile     string `arg:"--state-file"     default:"state.json"  help:"Path to the file that remembers when each host was scraped the last time"`
+	CacheFile     string `arg:"--cache-file"     default:"events.json" help:"Events cache file"`
+	StateFile     string `arg:"--state-file"     default:"state.json"  help:"File that remembers when each host was scraped the last time"`
 	WriteCalendar bool   `arg:"--write-calendar"                       help:"Write events into a local calendar file"`
-	CalendarFile  string `arg:"--calendar-file"  default:"events.ics"  help:"Path to the calendar file"`
-	UploadCalDAV  bool   `arg:"--upload-caldav"                        help:"Upload events to the CalDAV server"`
+	CalendarFile  string `arg:"--calendar-file"  default:"events.ics"  help:"Output calendar file if --write-calendar enabled"`
+	UploadCalDAV  bool   `arg:"--upload-caldav"                        help:"Upload events to the configured CalDAV server"`
 }
 
 func run() error {
