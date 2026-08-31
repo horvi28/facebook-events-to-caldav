@@ -15,6 +15,7 @@ A Facebook event scraper that scrapes upcoming events from a list of Facebook ho
 - Can write a local `events.ics` calendar file, colored by your own per-category colors.
 - Keeps the scraped events in `events.json`, which doubles as the record of what has already been fetched, so the details of an event are only ever requested once. See [The event cache](#the-event-cache) section.
 - Drops events from the cache once they are over, so it does not grow without end.
+- Can run as a background daemon, doing one run per interval, so no cron or systemd timer is needed next to it. See [Daemon mode](#daemon-mode).
 - Can upload individual `.ics` events to a CalDAV server.
 - Supports `.env` based configuration for CalDAV credentials.
 
@@ -36,6 +37,7 @@ Facebook rarely tags events with a category, so the one you assign drives the co
 | `--write-calendar` | `false`       | Write events to a local iCalendar file.                         |
 | `--calendar-file`  | `events.ics`  | Path to the local iCalendar file. Requires `--write-calendar`.  |
 | `--upload-caldav`  | `false`       | Upload events to the configured CalDAV server.                  |
+| `--daemon`         | `false`       | Keep running, one scrape per `daemon.interval`.                 |
 
 ### Examples
 
@@ -57,6 +59,9 @@ go run . --upload-caldav
 
 # Load events from the cache (events.json) instead of scraping:
 go run . --from-cache
+
+# Keep scraping in the background, one run per daemon.interval:
+go run . --daemon --upload-caldav
 ```
 
 ## Configuration
@@ -66,6 +71,8 @@ There are two configuration files, split by what belongs in Git.
 ### `config.yaml`
 
 How the scraper paces itself. It is part of the repository and is **required**. Durations are written with their unit (`5s`, `10m`, `1h`).
+
+Under `scrape:`:
 
 | Key                                                      | Description                                                       |
 | -------------------------------------------------------- | ----------------------------------------------------------------- |
@@ -78,6 +85,12 @@ How the scraper paces itself. It is part of the repository and is **required**. 
 | `hosts_per_run`                                          | How many hosts a single run scrapes.                              |
 
 Every wait is a random pause somewhere between its minimum and maximum, so each maximum has to be **greater** than its minimum. An equal pair is rejected on purpose.
+
+Under `daemon:`:
+
+| Key        | Description                                                                                           |
+| ---------- | ----------------------------------------------------------------------------------------------------- |
+| `interval` | Wait between two runs in [daemon mode](#daemon-mode). Ignored without `--daemon`, but still required. |
 
 Lowering the values makes a run finish sooner at the price of looking more like a bot to Facebook.
 
@@ -151,6 +164,25 @@ To avoid hitting Facebook too hard, the scraper waits between the detail request
 All of those waits are set in [`config.yaml`](#configyaml) rather than being built in, so the shipped values are a starting point and not a rule.
 
 The hosts of a run are processed one at a time. Events are deduplicated by Facebook event ID, so if the same event appears for multiple hosts, it is only kept once.
+
+### Daemon mode
+
+With `--daemon` the scraper stays alive and does one run per `daemon.interval` instead of exiting after the first one, so it does not need a cron entry or a systemd timer beside it.
+
+Together with `hosts_per_run` this is what sets how often a single profile is visited:
+
+```log
+every host is scraped every ≈ (number of hosts / hosts_per_run) × interval
+```
+
+Things worth knowing before leaving it running:
+
+- **A failed run does not stop the daemon.** The error is logged and the next run happens at the usual time. A run mostly fails because too many hosts were refused, and that is the worst possible moment to start over immediately, which is what exiting would cause under a supervisor that restarts the process.
+- **A run that lasts longer than the interval waits a whole interval anyway.** That only happens if the interval is set shorter than a run takes, and it is logged as a warning.
+- **`hosts.yaml` and `config.yaml` are read once at startup.** Editing either needs a restart.
+- **Stopping is safe.** `Ctrl-C` or a `SIGTERM` ends the process, and since `state.json` and `events.json` are written at the end of every run, at most the run in progress is lost.
+
+`--daemon` cannot be combined with `--from-cache`, as repeating a cache read forever would give the same events every time, which does not make any sense.
 
 ## My setup
 
