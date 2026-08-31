@@ -29,6 +29,7 @@ type Args struct {
 	WriteCalendar bool   `arg:"--write-calendar"                       help:"Write events into a local calendar file"`
 	CalendarFile  string `arg:"--calendar-file"  default:"events.ics"  help:"Output calendar file if --write-calendar enabled"`
 	UploadCalDAV  bool   `arg:"--upload-caldav"                        help:"Upload events to the configured CalDAV server"`
+	Daemon        bool   `arg:"--daemon"                               help:"Keep scraping, one run per daemon interval of the config"`
 }
 
 func run() error {
@@ -38,6 +39,12 @@ func run() error {
 	// If the user has added a separate calendar file, but --write-calendar is no given, throw an error
 	if !args.WriteCalendar && args.CalendarFile != defaultCalendarFilePath {
 		return errors.New("--calendar-file requires --write-calendar")
+	}
+
+	// Reading events from the cache does not make any sense in daemon mode.
+	// Reading the cache again and again would give the same events every time.
+	if args.Daemon && args.FromCache {
+		return errors.New("--daemon cannot be used with --from-cache")
 	}
 
 	hostConfig, err := loadHostConfig(args.HostsFile)
@@ -50,8 +57,34 @@ func run() error {
 		return err
 	}
 
+	if args.Daemon {
+		runDaemon(args, hostConfig, appConfig)
+		return nil
+	}
 
 	return runOnce(args, hostConfig, appConfig.Scrape)
+}
+
+// runDaemon keeps scraping until the process is stopped, one cycle per interval.
+//
+// The config and the hosts are the ones read at startup, so an edited file is
+// only picked up by a restart.
+func runDaemon(args Args, hostConfig *HostConfig, appConfig AppConfig) {
+	interval := appConfig.Daemon.Interval
+	log.Printf("Started in daemon mode, scraping every %v", interval)
+
+	for {
+		// A failed cycle is only logged, the daemon stays alive and tries again
+		// after the interval. A cycle mostly fails because too many hosts were
+		// refused, which is the moment when starting over right away is the
+		// worst answer.
+		if err := runOnce(args, hostConfig, appConfig.Scrape); err != nil {
+			log.Printf("Scrape cycle failed: %v", err)
+		}
+
+		log.Printf("Sleeping %v, the next scrape is at %s", interval, time.Now().Add(interval).Format(time.DateTime))
+		time.Sleep(interval)
+	}
 }
 
 // runOnce does a single pass: it collects the events and then writes them
