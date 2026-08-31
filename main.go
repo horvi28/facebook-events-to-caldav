@@ -11,11 +11,15 @@ import (
 	fbevents "github.com/grucha/facebook-events-scraper"
 )
 
-const defaultCalendarFilePath = "events.ics"
-
-// fileMode is used for every file the scraper writes. They are readable
-// outside the process that wrote them, as they are looked into by hand sometimes
-const fileMode = 0o644
+const (
+	// Default path for the event calendar output, this is used to validate the arguments
+	// where a user would add an event file (so it seems they want to use store the events),
+	// but not set the --write-calendar flag
+	defaultCalendarFilePath = "events.ics"
+	// fileMode is used for every file the scraper writes. They are readable
+	// outside the process that wrote them, as they are looked into by hand sometimes
+	fileMode = 0o644
+)
 
 // eventsByID is every known event, keyed by the Facebook event ID
 type eventsByID map[string]*fbevents.EventData
