@@ -74,10 +74,12 @@ func run() error {
 // The config and the hosts are the ones read at startup, so an edited file is
 // only picked up by a restart.
 func runDaemon(args Args, hostConfig *HostConfig, appConfig AppConfig) {
-	interval := appConfig.Daemon.Interval
-	log.Printf("Started in daemon mode, scraping every %v", interval)
+	daemonInterval := appConfig.Daemon.Interval
+	log.Printf("Started in daemon mode, scraping every %v", daemonInterval)
 
 	for {
+		cycleStart := time.Now()
+
 		// A failed cycle is only logged, the daemon stays alive and tries again
 		// after the interval. A cycle mostly fails because too many hosts were
 		// refused, which is the moment when starting over right away is the
@@ -86,9 +88,31 @@ func runDaemon(args Args, hostConfig *HostConfig, appConfig AppConfig) {
 			log.Printf("Scrape cycle failed: %v", err)
 		}
 
-		log.Printf("Sleeping %v, the next scrape is at %s", interval, time.Now().Add(interval).Format(time.DateTime))
-		time.Sleep(interval)
+		// Measure the execution time
+		cycleDuration := time.Since(cycleStart)
+		pause := nextPause(cycleDuration, daemonInterval)
+
+		log.Printf("Scraped for %v, sleeping %v, the next scrape is at %s",
+			cycleDuration.Round(time.Second), pause.Round(time.Second), time.Now().Add(pause).Format(time.DateTime))
+		time.Sleep(pause)
 	}
+}
+
+// nextPause tells how long to wait after a scrape that took the given time, so
+// that two scrapes start one interval apart instead of drifting away by the
+// time each of them took.
+//
+// A scrape that lasted longer than the interval waits a whole one instead of
+// starting again right away.
+func nextPause(cycleDuration, daemonInterval time.Duration) time.Duration {
+	remainingTime := daemonInterval - cycleDuration
+	if remainingTime <= 0 {
+		log.Printf("The scrape took %v, longer than the %v interval, waiting a whole one before the next scrape",
+			cycleDuration.Round(time.Second), daemonInterval)
+		return daemonInterval
+	}
+
+	return remainingTime
 }
 
 // runOnce does a single pass: it collects the events and then writes them
