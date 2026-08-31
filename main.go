@@ -50,13 +50,21 @@ func run() error {
 		return err
 	}
 
+
+	return runOnce(args, hostConfig, appConfig.Scrape)
+}
+
+// runOnce does a single pass: it collects the events and then writes them
+// wherever the arguments ask for.
+func runOnce(args Args, hostConfig *HostConfig, scrapeConfig ScrapeConfig) error {
 	// Load the events either from the cache or scraping them
 	var allEvents eventsByID
 	var scrapedEventsCount int
+	var err error
 	if args.FromCache {
 		allEvents, err = loadEventsFromJSONFile(args.CacheFile)
 	} else {
-		allEvents, scrapedEventsCount, err = scrapeAndCacheEvents(hostConfig, appConfig.Scrape, args.CacheFile, args.StateFile)
+		allEvents, scrapedEventsCount, err = scrapeAndCacheEvents(hostConfig, scrapeConfig, args.CacheFile, args.StateFile)
 	}
 	if err != nil {
 		return err
