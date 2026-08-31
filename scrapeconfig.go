@@ -26,10 +26,16 @@ type ScrapeConfig struct {
 	HostsPerRun         int        `yaml:"hosts_per_run"`
 }
 
+// DaemonConfig holds the settings of the background mode, see --daemon.
+type DaemonConfig struct {
+	Interval time.Duration `yaml:"interval"`
+}
+
 // AppConfig is the whole config file. Every group of settings lives under its
 // own key, so a new one can be added without disturbing the others.
 type AppConfig struct {
 	Scrape ScrapeConfig `yaml:"scrape"`
+	Daemon DaemonConfig `yaml:"daemon"`
 }
 
 // validate checks a pause of the config file. A maximum that is not above its
@@ -87,6 +93,16 @@ func validateScrapeConfig(config ScrapeConfig) error {
 	return validateCount("hosts_per_run", config.HostsPerRun)
 }
 
+// validateDaemonConfig rejects a config that would make the daemon spin instead
+// of waiting between two cycles
+func validateDaemonConfig(config DaemonConfig) error {
+	if config.Interval <= 0 {
+		return fmt.Errorf("daemon.interval must be a positive duration, got %v", config.Interval)
+	}
+
+	return nil
+}
+
 // loadAppConfig reads the config file. The file is required, as the scraper has
 // no built-in values to fall back to.
 func loadAppConfig(configFilePath string) (AppConfig, error) {
@@ -101,7 +117,11 @@ func loadAppConfig(configFilePath string) (AppConfig, error) {
 	}
 
 	if err := validateScrapeConfig(config.Scrape); err != nil {
-		return AppConfig{}, fmt.Errorf("invalid config file %s: %w", configFilePath, err)
+		return AppConfig{}, fmt.Errorf("invalid scrape config in %s: %w", configFilePath, err)
+	}
+
+	if err := validateDaemonConfig(config.Daemon); err != nil {
+		return AppConfig{}, fmt.Errorf("invalid daemon config in %s: %w", configFilePath, err)
 	}
 
 	return config, nil

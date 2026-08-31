@@ -55,6 +55,8 @@ scrape:
     max: 3h
   max_failed_hosts: 2
   hosts_per_run: 7
+daemon:
+  interval: 6h
 `
 	config, err := loadAppConfig(writeConfigFile(t, validConfig))
 	if err != nil {
@@ -72,6 +74,10 @@ scrape:
 	}
 	if config.Scrape != want {
 		t.Errorf("loadAppConfig = %+v, want %+v", config.Scrape, want)
+	}
+
+	if config.Daemon.Interval != 6*time.Hour {
+		t.Errorf("daemon interval = %v, want 6h", config.Daemon.Interval)
 	}
 }
 
@@ -259,5 +265,68 @@ scrape:
 	// config that says nothing at all.
 	if !strings.Contains(err.Error(), "pause_between_events.max") {
 		t.Errorf("error %q is not about the inverted pause", err)
+	}
+}
+
+// TestValidateDaemonConfig covers the interval that the daemon waits between two
+// cycles. A missing key parses as a zero, and a daemon that does not wait would
+// scrape back to back, which we want to avoid.
+func TestValidateDaemonConfig(t *testing.T) {
+	testCases := []struct {
+		name     string
+		interval time.Duration
+		valid    bool
+	}{
+		{name: "a valid interval", interval: 24 * time.Hour, valid: true},
+		{name: "a missing interval", interval: 0, valid: false},
+		{name: "a negative interval", interval: -1 * time.Hour, valid: false},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			err := validateDaemonConfig(DaemonConfig{Interval: testCase.interval})
+
+			if testCase.valid {
+				if err != nil {
+					t.Fatalf("validateDaemonConfig: %v", err)
+				}
+				return
+			}
+
+			if err == nil {
+				t.Fatal("expected an error, got none")
+			}
+		})
+	}
+}
+
+// TestLoadAppConfigValidatesTheDaemonSection makes sure the loader runs the
+// daemon validation as well, not only the one of the scrape section.
+func TestLoadAppConfigValidatesTheDaemonSection(t *testing.T) {
+	// A config with a valid scrape section but no daemon section at all
+	validScrape := `
+scrape:
+  pause_between_events:
+    min: 5s
+    max: 20s
+  pause_between_hosts:
+    min: 10s
+    max: 30s
+  long_pause_after_hosts: 10
+  long_pause:
+    min: 10m
+    max: 20m
+  pause_after_failure:
+    min: 1h
+    max: 2h
+  max_failed_hosts: 5
+  hosts_per_run: 20
+`
+	_, err := loadAppConfig(writeConfigFile(t, validScrape))
+	if err == nil {
+		t.Fatal("expected the loader to reject a config without a daemon section")
+	}
+	if !strings.Contains(err.Error(), "daemon.interval") {
+		t.Errorf("error %q is not about the missing interval", err)
 	}
 }

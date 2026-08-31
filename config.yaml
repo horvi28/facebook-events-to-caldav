@@ -37,3 +37,9 @@ scrape:
   # rest follow on the next runs, so all of them are covered eventually. Set it
   # to the number of hosts or a really big number to scrape everything in one go.
   hosts_per_run: 20
+
+# The background mode, see --daemon. A cycle scrapes hosts_per_run hosts and
+# then the daemon waits for the next one.
+daemon:
+  # Wait this amount between two scrape cycles
+  interval: 24h
