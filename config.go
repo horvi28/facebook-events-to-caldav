@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/caarlos0/env/v6"
 	"github.com/joho/godotenv"
@@ -15,7 +17,11 @@ type Config struct {
 }
 
 func loadConfig() (Config, error) {
-	if err := godotenv.Load(); err != nil {
+	// A missing .env file is not an error, the variables can come from the real
+	// environment just as well, which is how a container gets them. A file that
+	// exists but cannot be read or parsed is still an error, so a broken .env is
+	// not silently ignored.
+	if err := godotenv.Load(); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return Config{}, fmt.Errorf("load .env file: %w", err)
 	}
 
