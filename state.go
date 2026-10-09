@@ -18,6 +18,16 @@ import (
 // next run instead of being treated as done.
 type scrapeState map[string]time.Time
 
+func getLatestScrapeTime(state scrapeState) time.Time {
+	var latestScrape time.Time
+	for _, scrapeTime := range state {
+		if scrapeTime.After(latestScrape) {
+			latestScrape = scrapeTime
+		}
+	}
+	return latestScrape
+}
+
 // loadScrapeState reads the state file. A missing file is an empty state
 // instead of an error, which is the expected situation on the very first run.
 func loadScrapeState(statePath string) (scrapeState, error) {
@@ -38,8 +48,13 @@ func loadScrapeState(statePath string) (scrapeState, error) {
 	if err := json.Unmarshal(stateJSON, &state); err != nil {
 		return nil, fmt.Errorf("decode state file %s: %w", statePath, err)
 	}
+	log.Printf("Loaded the last scrape state of %d hosts from %s", len(state), statePath)
 
-	log.Printf("Loaded the last scrape time of %d hosts from %s", len(state), statePath)
+	if len(state) != 0 {
+		latestScrapeTime := getLatestScrapeTime(state)
+		log.Printf("The last scrape was at %v", latestScrapeTime)
+	}
+
 	return state, nil
 }
 
