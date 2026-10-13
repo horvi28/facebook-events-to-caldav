@@ -1,4 +1,4 @@
-module facebook-event-scraper
+module github.com/horvi28/facebook-events-to-caldav
 
 go 1.25.6
 

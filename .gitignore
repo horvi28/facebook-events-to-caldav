@@ -3,3 +3,6 @@ events.ics
 events.json
 hosts.yaml
 state.json
+facebook-events-to-caldav
+.tokensave
+coverage.out
