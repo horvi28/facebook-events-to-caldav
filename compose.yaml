@@ -33,6 +33,5 @@ services:
       # The two config files are only ever read
       - ./hosts.yaml:/app/hosts.yaml:ro
       - ./config.yaml:/app/config.yaml:ro
-      # Both have to exist before the first start, see the README
-      - ./events.json:/app/events.json
-      - ./state.json:/app/state.json
+      # The cache and the state are stored here
+      - ./data:/app/data

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
 	"strings"
 	"time"
 
@@ -161,7 +160,7 @@ func writeCalendarToFile(calendar *ics.Calendar, filePath string) error {
 	}
 
 	calendarContent := calendar.Serialize()
-	if err := os.WriteFile(filePath, []byte(calendarContent), fileMode); err != nil {
+	if err := writeFile(filePath, []byte(calendarContent)); err != nil {
 		return fmt.Errorf("write calendar file %s: %w", filePath, err)
 	}
 

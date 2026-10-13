@@ -33,7 +33,7 @@ func dumpEventsToJSONFile(events eventsByID, eventsJSONPath string) error {
 	}
 
 	log.Printf("Dumping %d events to JSON file: %s", len(events), eventsJSONPath)
-	if err := os.WriteFile(eventsJSONPath, eventsJSON, fileMode); err != nil {
+	if err := writeFile(eventsJSONPath, eventsJSON); err != nil {
 		return fmt.Errorf("write events JSON file %s: %w", eventsJSONPath, err)
 	}
 

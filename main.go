@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/alexflint/go-arg"
@@ -15,25 +17,42 @@ const (
 	// Default path for the event calendar output, this is used to validate the arguments
 	// where a user would add an event file (so it seems they want to use store the events),
 	// but not set the --write-calendar flag
-	defaultCalendarFilePath = "events.ics"
+	defaultCalendarFilePath = "data/events.ics"
 	// fileMode is used for every file the scraper writes. They are readable
 	// outside the process that wrote them, as they are looked into by hand sometimes
 	fileMode = 0o644
+	// directoryMode is used for the directory of those files, if it has to be created
+	directoryMode = 0o755
 )
 
 // eventsByID is every known event, keyed by the Facebook event ID
 type eventsByID map[string]*fbevents.EventData
 
 type Args struct {
-	HostsFile     string `arg:"--hosts"          default:"hosts.yaml"  help:"File contains host's urls, for which events should be scraped"`
-	ConfigFile    string `arg:"--config"         default:"config.yaml" help:"File that contains the scraping configuration"`
-	FromCache     bool   `arg:"--from-cache"                           help:"Load events from the cache file instead of scraping"`
-	CacheFile     string `arg:"--cache-file"     default:"events.json" help:"Events cache file"`
-	StateFile     string `arg:"--state-file"     default:"state.json"  help:"File that remembers when each host was scraped the last time"`
-	WriteCalendar bool   `arg:"--write-calendar"                       help:"Write events into a local calendar file"`
-	CalendarFile  string `arg:"--calendar-file"  default:"events.ics"  help:"Output calendar file if --write-calendar enabled"`
-	UploadCalDAV  bool   `arg:"--upload-caldav"                        help:"Upload events to the configured CalDAV server"`
-	Daemon        bool   `arg:"--daemon"                               help:"Keep scraping, one run per daemon interval of the config"`
+	HostsFile     string `arg:"--hosts"          default:"hosts.yaml"       help:"File contains host urls, for which events should be scraped"`
+	ConfigFile    string `arg:"--config"         default:"config.yaml"      help:"File that contains the scraping configuration"`
+	FromCache     bool   `arg:"--from-cache"                                help:"Load events from the cache file instead of scraping"`
+	CacheFile     string `arg:"--cache-file"     default:"data/events.json" help:"Events cache file"`
+	StateFile     string `arg:"--state-file"     default:"data/state.json"  help:"File that remembers when each host was last scraped"`
+	WriteCalendar bool   `arg:"--write-calendar"                            help:"Write events into a local calendar file"`
+	CalendarFile  string `arg:"--calendar-file"  default:"data/events.ics"  help:"Output calendar file if --write-calendar enabled"`
+	UploadCalDAV  bool   `arg:"--upload-caldav"                             help:"Upload events to the configured CalDAV server"`
+	Daemon        bool   `arg:"--daemon"                                    help:"Keep scraping, one run per daemon interval of the config"`
+}
+
+// writeFile writes a file of the scraper and creates its directory first if it
+// is missing, so a finished run is not lost over a data directory that is not there
+func writeFile(filePath string, content []byte) error {
+	directory := filepath.Dir(filePath)
+	if err := os.MkdirAll(directory, directoryMode); err != nil {
+		return fmt.Errorf("create directory %s: %w", directory, err)
+	}
+
+	if err := os.WriteFile(filePath, content, fileMode); err != nil {
+		return fmt.Errorf("write file: %w", err)
+	}
+
+	return nil
 }
 
 func run() error {

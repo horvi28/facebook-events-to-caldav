@@ -65,7 +65,7 @@ func saveScrapeState(state scrapeState, statePath string) error {
 	}
 
 	log.Printf("Saving the last scrape time of %d hosts to %s", len(state), statePath)
-	if err := os.WriteFile(statePath, stateJSON, fileMode); err != nil {
+	if err := writeFile(statePath, stateJSON); err != nil {
 		return fmt.Errorf("write state file %s: %w", statePath, err)
 	}
 

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -42,5 +44,21 @@ func TestNextPause(t *testing.T) {
 				t.Errorf("nextPause(%v, %v) = %v, want %v", testCase.cycleDuration, daemonInterval, pause, testCase.want)
 			}
 		})
+	}
+}
+
+func TestWriteFileCreatesMissingDirectory(t *testing.T) {
+	filePath := filepath.Join(t.TempDir(), "data", "events.json")
+
+	if err := writeFile(filePath, []byte("[]")); err != nil {
+		t.Fatalf("writeFile() returned an error: %v", err)
+	}
+
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		t.Fatalf("read the written file: %v", err)
+	}
+	if string(content) != "[]" {
+		t.Errorf("content = %q, want %q", content, "[]")
 	}
 }

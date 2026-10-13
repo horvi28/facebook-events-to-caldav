@@ -27,28 +27,28 @@ Facebook rarely tags events with a category, so the one you assign drives the co
 
 ### Arguments
 
-| Argument           | Default       | Description                                                     |
-| ------------------ | ------------- | --------------------------------------------------------------- |
-| `--hosts`          | `hosts.yaml`  | Path to the YAML file mapping categories to Facebook host URLs. |
-| `--config`         | `config.yaml` | Path to the YAML file holding the scraping configuration.       |
-| `--from-cache`     | `false`       | Load events from the cache file instead of scraping Facebook.   |
-| `--cache-file`     | `events.json` | Path to the JSON cache file.                                    |
-| `--state-file`     | `state.json`  | Path to the file remembering when each host was last scraped.   |
-| `--write-calendar` | `false`       | Write events to a local iCalendar file.                         |
-| `--calendar-file`  | `events.ics`  | Path to the local iCalendar file. Requires `--write-calendar`.  |
-| `--upload-caldav`  | `false`       | Upload events to the configured CalDAV server.                  |
-| `--daemon`         | `false`       | Keep running, one scrape per `daemon.interval`.                 |
+| Argument           | Default            | Description                                                     |
+| ------------------ | ------------------ | --------------------------------------------------------------- |
+| `--hosts`          | `hosts.yaml`       | Path to the YAML file mapping categories to Facebook host URLs. |
+| `--config`         | `config.yaml`      | Path to the YAML file holding the scraping configuration.       |
+| `--from-cache`     | `false`            | Load events from the cache file instead of scraping Facebook.   |
+| `--cache-file`     | `data/events.json` | Path to the JSON cache file.                                    |
+| `--state-file`     | `data/state.json`  | Path to the file remembering when each host was last scraped.   |
+| `--write-calendar` | `false`            | Write events to a local iCalendar file.                         |
+| `--calendar-file`  | `data/events.ics`  | Path to the local iCalendar file. Requires `--write-calendar`.  |
+| `--upload-caldav`  | `false`            | Upload events to the configured CalDAV server.                  |
+| `--daemon`         | `false`            | Keep running, one scrape per `daemon.interval`.                 |
 
 ### Examples
 
 ```sh
-# By default, the scraper reads `hosts.yaml`, scrapes events, and writes only the cache (`events.json`):
+# By default, the scraper reads `hosts.yaml`, scrapes events, and writes only the cache (`data/events.json`):
 go run .
 
 # Use custom input and output paths:
 go run . --hosts private-hosts.yaml --cache-file path-to-events.json --write-calendar --calendar-file path-to-events.ics
 
-# Write a local calendar file. This creates `events.ics` in the current directory:
+# Write a local calendar file. This creates `data/events.ics`:
 go run . --write-calendar
 
 # Write a local calendar file to another path:
@@ -57,7 +57,7 @@ go run . --write-calendar --calendar-file path-to-events.ics
 # Scrape events and upload them to CalDAV:
 go run . --upload-caldav
 
-# Load events from the cache (events.json) instead of scraping:
+# Load events from the cache (data/events.json) instead of scraping:
 go run . --from-cache
 
 # Keep scraping in the background, one run per daemon.interval:
@@ -188,21 +188,19 @@ Things worth knowing before leaving it running:
 
 The repository ships a `Dockerfile` and a `compose.yaml` that run the scraper as a daemon in the background.
 
-Mounted files:
+Mounted paths:
 
-| Path            | Mode       | Why                                                                                                          |
-| --------------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
-| `./hosts.yaml`  | read only  | The profiles to scrape, only ever read.                                                                      |
-| `./config.yaml` | read only  | The pacing, only ever read.                                                                                  |
-| `./events.json` | read write | The event cache, kept on the host so a rebuilt container does not re-scrape every event detail from nothing. |
-| `./state.json`  | read write | Which host was scraped when, so a restart continues instead of starting the host list over.                  |
+| Path            | Mode       | Why                                                                                                             |
+| --------------- | ---------- | --------------------------------------------------------------------------------------------------------------- |
+| `./hosts.yaml`  | read only  | The profiles to scrape, only ever read.                                                                         |
+| `./config.yaml` | read only  | The pacing, only ever read.                                                                                     |
+| `./data`        | read write | Holds `events.json` and `state.json`, kept on the host so a rebuilt container continues where the last one was. |
 
-> [!IMPORTANT]
-> Create `events.json` and `state.json` **before** the first `docker compose up`. Docker creates a missing bind mount source itself, and for a file path it creates a **directory** owned by `root`, which the scraper then cannot read or write.
+The scraper creates `events.json` and `state.json` in `./data` on its first run, so nothing has to be prepared beforehand.
 
 A few details:
 
-- **The container runs as uid 1000**, which is the id a first user gets on a Linux machine, so the two files stay yours rather than turning into root's. Adjust the `USER` line of the `Dockerfile` if your own id differs.
+- **The container runs as uid 1000**, which is the id a first user gets on a Linux machine, so it can write into `./data` and the two files stay yours rather than turning into root's. Adjust the `USER` line of the `Dockerfile` if your own id differs.
 - **`.env` is optional.** The CalDAV credentials can be given under `environment:` in the compose file instead, which is the usual way in a container. Neither is needed without `--upload-caldav`.
 - **Editing `hosts.yaml` or `config.yaml` needs a `docker compose restart`,** as both are read once at startup.
 
