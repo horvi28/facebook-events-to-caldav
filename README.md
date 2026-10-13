@@ -184,6 +184,28 @@ Things worth knowing before leaving it running:
 
 `--daemon` cannot be combined with `--from-cache`, as repeating a cache read forever would give the same events every time, which does not make any sense.
 
+## Docker Compose
+
+The repository ships a `Dockerfile` and a `compose.yaml` that run the scraper as a daemon in the background.
+
+Mounted files:
+
+| Path            | Mode       | Why                                                                                                          |
+| --------------- | ---------- | ------------------------------------------------------------------------------------------------------------ |
+| `./hosts.yaml`  | read only  | The profiles to scrape, only ever read.                                                                      |
+| `./config.yaml` | read only  | The pacing, only ever read.                                                                                  |
+| `./events.json` | read write | The event cache, kept on the host so a rebuilt container does not re-scrape every event detail from nothing. |
+| `./state.json`  | read write | Which host was scraped when, so a restart continues instead of starting the host list over.                  |
+
+> [!IMPORTANT]
+> Create `events.json` and `state.json` **before** the first `docker compose up`. Docker creates a missing bind mount source itself, and for a file path it creates a **directory** owned by `root`, which the scraper then cannot read or write.
+
+A few details:
+
+- **The container runs as uid 1000**, which is the id a first user gets on a Linux machine, so the two files stay yours rather than turning into root's. Adjust the `USER` line of the `Dockerfile` if your own id differs.
+- **`.env` is optional.** The CalDAV credentials can be given under `environment:` in the compose file instead, which is the usual way in a container. Neither is needed without `--upload-caldav`.
+- **Editing `hosts.yaml` or `config.yaml` needs a `docker compose restart`,** as both are read once at startup.
+
 ## My setup
 
 I run this project regularly on my server and upload the scraped events to a [Radicale](https://radicale.org/) CalDAV server.

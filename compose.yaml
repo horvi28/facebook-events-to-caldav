@@ -1,0 +1,38 @@
+services:
+  scraper:
+    build: .
+    container_name: facebook-scraper
+
+    # No automatic restart, not even after a reboot.
+    # The cache and the state are written in place without an atomic rename,
+    # so a container that died with the machine may have left a half written events.json
+    # behind. Coming back up on its own would only bury that in a scrape cycle
+    # failing over and over, so a start is a manual step and a chance to look at
+    # the two files first.
+    restart: "no"
+
+    # One run per the daemon interval of config.yaml. Drop --upload-caldav to
+    # only collect the events into the cache without publishing them anywhere.
+    command:
+      - --daemon
+      - --upload-caldav
+
+    # The CalDAV credentials. Not required, as the variables can be given here
+    # under environment instead, and they are not needed at all without
+    # --upload-caldav.
+    env_file:
+      - path: .env
+        required: false
+
+    environment:
+      # Only decides how the log timestamps read, every calendar entry is
+      # written in UTC no matter what this says
+      TZ: Europe/Budapest
+
+    volumes:
+      # The two config files are only ever read
+      - ./hosts.yaml:/app/hosts.yaml:ro
+      - ./config.yaml:/app/config.yaml:ro
+      # Both have to exist before the first start, see the README
+      - ./events.json:/app/events.json
+      - ./state.json:/app/state.json
